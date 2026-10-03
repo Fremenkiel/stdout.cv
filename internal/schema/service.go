@@ -1,4 +1,4 @@
-package user
+package schema
 
 import "context"
 
@@ -10,6 +10,6 @@ func NewService(r *Repository) *Service {
 	return &Service{repository: r}
 }
 
-func (s *Service) GetUser(ctx context.Context) (*User, error) {
-	return s.repository.GetUser(ctx)
+func (s *Service) GetSchema(ctx context.Context, name string) ([]*Schema, error) {
+	return s.repository.GetSchema(ctx, name)
 }

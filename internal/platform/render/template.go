@@ -1,6 +1,7 @@
 package render
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -34,6 +35,8 @@ func NewTemplateRenderer() *TemplateRenderer {
 }
 
 func (r *TemplateRenderer) RenderPage(w http.ResponseWriter, name string, data any) error {
+	var buf bytes.Buffer
+
 	filename := fmt.Sprintf("%s.html", name)
 
 	temp, ok := r.pageCache[filename]
@@ -41,9 +44,21 @@ func (r *TemplateRenderer) RenderPage(w http.ResponseWriter, name string, data a
 		return fmt.Errorf("template %s not found", name)
 	}
 
-	return temp.ExecuteTemplate(w, filename, data)
+	if err := temp.ExecuteTemplate(&buf, filename, data); err != nil {
+		return err
+	}
+
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 func (r *TemplateRenderer) RenderFragment(w http.ResponseWriter, name string, data any) error {
-	return r.base.ExecuteTemplate(w, name, data)
+	var buf bytes.Buffer
+
+	if err := r.base.ExecuteTemplate(&buf, name, data); err != nil {
+		return err
+	}
+
+	_, err := buf.WriteTo(w)
+	return err
 }

@@ -1,0 +1,11 @@
+{{ define "row-container" }}
+<div class="c-list" id="row-container">
+{{ if .Rows }}
+{{ range .Rows }}
+  {{ range . }}
+<p>{{ . }}</p>
+{{ end }}
+{{ end }}
+{{ end }}
+</div>
+{{ end }}

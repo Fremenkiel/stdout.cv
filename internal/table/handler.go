@@ -1,4 +1,4 @@
-package user
+package table
 
 import (
 	"encoding/json"
@@ -19,7 +19,8 @@ func NewHandler(r render.Renderer, s *Service) *Handler {
 }
 
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
-	user, err := h.service.GetUser(r.Context())
+	ctx := r.Context()
+	tables, err := h.service.GetTables(ctx)
 	if err != nil {
 		log.Printf("Error thrown: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -28,19 +29,30 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	if strings.Contains(r.Header.Get("Accept"), "application/json") {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(user)
+		json.NewEncoder(w).Encode(tables)
 		return
 	}
 
-	viewData := h.getUserViewData(user)
+	if ctx.Err() != nil {
+		log.Printf("table: context error, %v", ctx.Err())
+		w.WriteHeader(http.StatusRequestTimeout)
+		return
+	}
 
-	if err := h.renderer.RenderPage(w, "user", viewData); err != nil {
+	viewData := &TableListViewData{}
+
+	for i := range tables {
+		viewData.Tables = append(viewData.Tables, h.getTableViewData(tables[i]))
+	}
+
+	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
+		log.Printf("table: error thrown while rendering, %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (h *Handler) getUserViewData(user *User) UserViewData {
-	return UserViewData{
-		Name: user.Name,
+func (h *Handler) getTableViewData(table *Table) TableViewData {
+	return TableViewData{
+		Name: table.Name,
 	}
 }

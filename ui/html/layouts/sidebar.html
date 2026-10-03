@@ -1,0 +1,7 @@
+{{ block "sidebar" . }}
+<div class="l-sidebar">
+{{ range .Tables }}
+<p>{{ .Name }}</p>
+{{ end }}
+</div>
+{{ end }}

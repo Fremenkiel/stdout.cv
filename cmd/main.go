@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -12,11 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
+	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
 	"github.com/fremenkiel/stdout.cv/internal/platform/render"
-	"github.com/fremenkiel/stdout.cv/internal/user"
+	"github.com/fremenkiel/stdout.cv/internal/row"
+	"github.com/fremenkiel/stdout.cv/internal/schema"
+	"github.com/fremenkiel/stdout.cv/internal/session"
+	"github.com/fremenkiel/stdout.cv/internal/table"
 	"github.com/fremenkiel/stdout.cv/pkg/dotenv"
-	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -24,30 +25,40 @@ func main() {
 		log.Fatalf("Unable to load .env files: %v", err)
 	}
 
-	dbURI := os.Getenv("DB_URI")
-
-	db, err := sql.Open("sqlite", dbURI)
+	_, err := os.Stat("/tmp/stdout_cv_sessions")
 	if err != nil {
-		log.Fatalf("Unable to connect to db: %v", err)
+		if err := os.MkdirAll("/tmp/stdout_cv_sessions", os.ModePerm); err != nil {
+			log.Fatalf("Unable to create tmp folder: %v", err)
+		}
 	}
 
-	if err := database.InitializeSchema(db); err != nil {
-		log.Fatal("Unable to apply schema: %v", err)
-	}
+	sessionCache := session.NewCache()
 
-	mux := &http.ServeMux{}
+	rowRepo := row.NewRepository(sessionCache)
+	schemaRepo := schema.NewRepository(sessionCache)
+	tableRepo := table.NewRepository(sessionCache)
 
-	mux.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./ui/static/scripts"))))
+	schemaService := schema.NewService(schemaRepo)
+	rowService := row.NewService(rowRepo, schemaService)
+	sessionService := session.NewService(sessionCache)
+	tableService := table.NewService(tableRepo)
 
 	renderer := render.NewTemplateRenderer()
 
-	userRepo := user.NewRepository(db)
+	rowHandler := row.NewHandler(renderer, rowService)
+	tableHandler := table.NewHandler(renderer, tableService)
 
-	userService := user.NewService(userRepo)
+	mux := new(middleware.MiddlewareMux)
 
-	userHandler := user.NewHandler(renderer, userService)
+	sessionMiddleware := session.NewMiddleware(sessionService)
+	mux.AppendMiddleware(sessionMiddleware.Handle)
 
-	user.NewRouter(mux, userHandler)
+	mux.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./ui/static/scripts"))))
+	mux.Handle("/styles/", http.StripPrefix("/styles/", http.FileServer(http.Dir("./ui/static/styles"))))
+
+
+	table.NewRouter(mux, tableHandler)
+	row.NewRouter(mux, rowHandler)
 
 	port := os.Getenv("PORT")
 	address := fmt.Sprintf(":%s", port)
