@@ -1,5 +1,6 @@
 {{ define "body" }}
 <div>
+  {{ template "error-card" . }}
   <form hx-get="/rows" hx-target="#row-container" hx-swap="outerHTML">
     <input name="query" type="text"/>
     <button type="submit">Query</button>

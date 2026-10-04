@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
 	"github.com/fremenkiel/stdout.cv/internal/platform/render"
+	"github.com/fremenkiel/stdout.cv/internal/query"
 )
 
 type Handler struct {
@@ -22,12 +24,28 @@ func NewHandler(r render.Renderer, s *Service) *Handler {
 func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	query := r.URL.Query().Get("query")
+	queryString := r.URL.Query().Get("query")
 
-	rows, err := h.service.GetRows(ctx, query)
+	rows, err := h.service.GetRows(ctx, queryString)
 	if err != nil {
-		if errors.Is(err, ErrQueryNotAllowed) {
+		if errors.Is(err, query.ErrQueryNotAllowed) {
 			w.WriteHeader(http.StatusUnprocessableEntity)
+			libErr := &lib.Error{
+				Title: "Query not allowed",
+				Message: "The entered query is not allowed at this point in time",
+			}
+			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
+				log.Printf("row: error thrown while rendering error container, %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+			return
+		}
+		if libErr, ok := lib.ParseSqliteError(err); ok {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
+				log.Printf("row: error thrown while rendering error container, %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 			return
 		}
 		log.Printf("Error thrown: %v", err)
@@ -47,10 +65,12 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData := &RowListViewData{}
+	viewData := &RowListViewData{
+		Rows: make([]RowViewData, len(rows)),
+	}
 
 	for i := range rows {
-		viewData.Rows = append(viewData.Rows, h.getRowViewData(rows[i]))
+		viewData.Rows[i] = h.getRowViewData(rows[i])
 	}
 
 	if err := h.renderer.RenderFragment(w, "row-container", viewData); err != nil {

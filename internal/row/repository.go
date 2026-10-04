@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform"
+	"github.com/fremenkiel/stdout.cv/internal/query"
 	_ "modernc.org/sqlite"
 )
 
@@ -20,14 +21,14 @@ func NewRepository(sc SessionCache) *Repository {
 	return &Repository{sessionCache: sc}
 }
 
-func (r *Repository) GetRows(ctx context.Context, query string, fields []string, table string) ([]*Row, error) {
+func (r *Repository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
 	databaseName, err := r.sessionCache.GetFile(ctx.Value(platform.SessionKey).(string))
 	db, err := sql.Open("sqlite", databaseName)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.QueryContext(ctx, queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +37,7 @@ func (r *Repository) GetRows(ctx context.Context, query string, fields []string,
 	var list []*Row
 
 	for rows.Next() {
-		rawBuffer := make([]sql.RawBytes, len(fields))
+		rawBuffer := make([]sql.RawBytes, len(query.Fields))
 		callArgs := make([]interface{}, len(rawBuffer))
 
 		for i := range rawBuffer {

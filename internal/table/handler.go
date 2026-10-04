@@ -39,10 +39,14 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData := &TableListViewData{}
+	viewData := &TableListViewData{
+		Tables: make([]TableViewData, len(tables)),
+		Error: nil,
+		Rows: nil,
+	}
 
 	for i := range tables {
-		viewData.Tables = append(viewData.Tables, h.getTableViewData(tables[i]))
+		viewData.Tables[i] = h.getTableViewData(tables[i])
 	}
 
 	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {

@@ -2,12 +2,18 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-  {{ template "header.html" . }}
+    {{ template "header.html" . }}
   </head>
   <body>
-    {{ template "sidebar" . }}
-    {{ block "body" . }}
-    {{ end }}
+    <div class="page">
+      <nav class="page__nav">
+        {{ template "sidebar" . }}
+      </nav>
+      <main class="page__main">
+        {{ block "body" . }}
+      </main>
+      {{ end }}
+    </div>
   </body>
 </html>
 {{ end }}

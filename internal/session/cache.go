@@ -1,13 +1,12 @@
 package session
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
-)
 
-var ErrFileNotFound = errors.New("session: file not found in cache")
+	"github.com/fremenkiel/stdout.cv/internal/platform/database"
+)
 
 type Cahce struct {
 	sessions	sync.Map
@@ -20,19 +19,30 @@ func NewCache() *Cahce {
 	}
 }
 
+// Adds session id to cache, alongside timestamp.
+// Uses Update under the hood, and ingores response
 func (c *Cahce) AddSession(id string) {
-	c.sessions.Store(id, time.Now())
-	c.AddFile(id)
+	c.UpdateSession(id)
 }
 
+// Loads session by id. If no session is found, then an empty struct is returned
+func (c *Cahce) LoadSession(id string) (time.Time, bool) {
+	if value, ok := c.sessions.Load(id); ok {
+		return value.(time.Time), ok
+	}
+	return time.Time{}, false
+}
+
+// Updated session timestamp in cache, adds if not exists.
+// Returns whether or not the session already were present in the cache.
 func (c *Cahce) UpdateSession(id string) bool {
 	_, loaded := c.sessions.Swap(id, time.Now())
-	if !loaded {
-		c.AddFile(id)
-	}
+
 	return loaded 
 }
 
+// Deletes all sessions older then 5 minutes from the cache.
+// Returns the deleted session ids.
 func (c *Cahce) LoadAndDeleteOldSessions() []string {
 	var oldSessions []string
 
@@ -45,14 +55,18 @@ func (c *Cahce) LoadAndDeleteOldSessions() []string {
 
 	for i := range oldSessions {
 		c.sessions.Delete(oldSessions[i])
-		c.RemoveFile(oldSessions[i])
 	}
 
 	return oldSessions
 }
 
-func (c *Cahce) AddFile(id string) {
-	c.files[id] = fmt.Sprintf("/tmp/stdout_cv_sessions/session_%s.db", id)
+// Adds session database file path to cache
+func (c *Cahce) AddFile(id string) string {
+	filePath := fmt.Sprintf(database.DatabaseFileNameTemplate, id)
+
+	c.files[id] = filePath
+
+	return filePath
 }
 
 func (c *Cahce) RemoveFile(id string) {

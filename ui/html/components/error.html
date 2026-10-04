@@ -1,0 +1,20 @@
+{{ define "error-container" }}
+<div class="card__container" id="error-container">
+  <h1 class="card__title">{{ .Title }}</h1>
+  <p class="card__paragraph">{{ .Message }}</p>
+</div>
+{{ end }}
+
+{{ define "error-card" }}
+<div class="card card--error" id="error-card">
+  {{ if .Error }}
+  {{ template "error-container" . }}
+  {{ end }}
+</div>
+{{ end }}
+
+{{ define "error-container-swap" }}
+<hx-partial hx-target="#error-card" hx-swap="innerHTML">
+  {{ template "error-container" . }}
+</hx-partial>
+{{ end }}
