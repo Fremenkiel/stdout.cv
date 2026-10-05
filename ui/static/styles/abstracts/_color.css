@@ -1,3 +1,15 @@
 body {
-  --color-primary: #000;
+  --color-primary: #406ee5;
+  --color-background-primary: #fff;
+  --color-background-secondary: #f7f8fa;
+
+  --color-text-primary: #1b1f27;
+  --color-text-secondary: #8a90a0;
+  --color-text-contrast: #fff;
+
+  --color-code-keyword: #2f6fed;
+  --color-code-string: #15803d;
+  --color-code-number: #b45309;
+
+  --color-border: #eceef2;
 }

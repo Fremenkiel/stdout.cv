@@ -1,0 +1,6 @@
+.button {
+  padding: 7px 8px;
+  font-weight: 500;
+  border: 0;
+  border-radius: var(--size-border-radius);
+}

@@ -47,8 +47,6 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		Rows: nil,
 	}
 
-log.Printf("db name: %s", viewData.DatabaseName)
-
 	for i := range tables {
 		viewData.Tables[i] = h.getTableViewData(tables[i])
 	}

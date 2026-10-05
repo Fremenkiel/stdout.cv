@@ -1,0 +1,11 @@
+.query {
+  padding: 0 14px;
+}
+
+.query__submit {
+  position: fixed;
+  top: 20px;
+  right: 14px;
+  background-color: var(--color-primary);
+  color: var(--color-text-contrast);
+}

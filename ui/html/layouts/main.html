@@ -7,12 +7,16 @@
   <body>
     <div class="page">
       <nav class="page__nav">
-        {{ template "sidebar" . }}
+        {{ template "nav" . }}
       </nav>
-      <main class="page__main">
-        {{ block "body" . }}
+      <main class="page__query">
+        {{ block "query" . }}
+        {{ end }}
       </main>
-      {{ end }}
+      <main class="page__result">
+        {{ block "result" . }}
+        {{ end }}
+      </main>
     </div>
   </body>
 </html>

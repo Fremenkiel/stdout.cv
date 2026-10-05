@@ -1,0 +1,13 @@
+body {
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+h1 {
+  font-size: var(--font-size-header);
+  color: var(--color-text-primary);
+}
+
+h2 {
+  font-size: var(--font-size-subheader);
+  color: var(--color-text-primary);
+}

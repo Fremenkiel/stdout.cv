@@ -1,17 +1,18 @@
 /* base */
 @import url("./base/_reset.css");
+@import url("./base/_typography.css");
 
 /* abstract */
 @import "./abstracts/_color.css";
 @import "./abstracts/_typography.css";
+@import "./abstracts/_size.css";
 
 /* layout */
 @import url("./layout/_page.css");
-@import url("./layout/_nav.css");
-@import url("./layout/_main.css");
 
 /* components */
-
-/* pages */
-
-/* vendors */
+@import url("./components/_button.css");
+@import url("./components/_header.css");
+@import url("./components/_nav.css");
+@import url("./components/_result.css");
+@import url("./components/_query.css");

@@ -1,0 +1,5 @@
+.result {
+  display: flex;
+  margin: var(--size-margin);
+}
+

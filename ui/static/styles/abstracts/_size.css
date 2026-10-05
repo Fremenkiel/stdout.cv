@@ -1,0 +1,6 @@
+body {
+  --size-padding: 20px 14px;
+  --size-margin: 20px 14px;
+
+  --size-border-radius: 7px;
+}
