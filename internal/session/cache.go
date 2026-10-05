@@ -8,25 +8,25 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 )
 
-type Cahce struct {
+type Cache struct {
 	sessions	sync.Map
 	files			map[string]string
 }
 
-func NewCache() *Cahce {
-	return &Cahce{
+func NewCache() *Cache {
+	return &Cache{
 		files: make(map[string]string),
 	}
 }
 
 // Adds session id to cache, alongside timestamp.
 // Uses Update under the hood, and ingores response
-func (c *Cahce) AddSession(id string) {
+func (c *Cache) AddSession(id string) {
 	c.UpdateSession(id)
 }
 
 // Loads session by id. If no session is found, then an empty struct is returned
-func (c *Cahce) LoadSession(id string) (time.Time, bool) {
+func (c *Cache) LoadSession(id string) (time.Time, bool) {
 	if value, ok := c.sessions.Load(id); ok {
 		return value.(time.Time), ok
 	}
@@ -35,7 +35,7 @@ func (c *Cahce) LoadSession(id string) (time.Time, bool) {
 
 // Updated session timestamp in cache, adds if not exists.
 // Returns whether or not the session already were present in the cache.
-func (c *Cahce) UpdateSession(id string) bool {
+func (c *Cache) UpdateSession(id string) bool {
 	_, loaded := c.sessions.Swap(id, time.Now())
 
 	return loaded 
@@ -43,7 +43,7 @@ func (c *Cahce) UpdateSession(id string) bool {
 
 // Deletes all sessions older then 5 minutes from the cache.
 // Returns the deleted session ids.
-func (c *Cahce) LoadAndDeleteOldSessions() []string {
+func (c *Cache) LoadAndDeleteOldSessions() []string {
 	var oldSessions []string
 
 	c.sessions.Range(func(key any, value any) bool {
@@ -61,7 +61,7 @@ func (c *Cahce) LoadAndDeleteOldSessions() []string {
 }
 
 // Adds session database file path to cache
-func (c *Cahce) AddFile(id string) string {
+func (c *Cache) AddFile(id string) string {
 	filePath := fmt.Sprintf(database.DatabaseFileNameTemplate, id)
 
 	c.files[id] = filePath
@@ -69,11 +69,11 @@ func (c *Cahce) AddFile(id string) string {
 	return filePath
 }
 
-func (c *Cahce) RemoveFile(id string) {
+func (c *Cache) RemoveFile(id string) {
 	delete(c.files, id)
 }
 
-func (c *Cahce) GetFile(id string) (string, error) {
+func (c *Cache) GetFile(id string) (string, error) {
 	str, ok := c.files[id]
 	if !ok {
 		return "", ErrFileNotFound

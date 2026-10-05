@@ -25,6 +25,15 @@ func NewService(r *Repository, ss SchemaService) *Service {
 }
 
 func (s *Service) GetRows(ctx context.Context, queryString string) ([]*Row, error) {
+	q, err := s.parseQuery(ctx, queryString)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repository.GetRows(ctx, queryString, q)
+}
+
+func (s *Service) parseQuery(ctx context.Context, queryString string) (*query.Query, error) {
 	q, err := query.Parse(queryString)
 	if err != nil {
 		return nil, err
@@ -42,5 +51,5 @@ func (s *Service) GetRows(ctx context.Context, queryString string) ([]*Row, erro
 		}
 	}
 
-	return s.repository.GetRows(ctx, queryString, q)
+	return q, nil
 }

@@ -12,10 +12,10 @@ import (
 )
 
 type Service struct {
-	cache	*Cahce
+	cache	*Cache
 }
 
-func NewService(c *Cahce) *Service {
+func NewService(c *Cache) *Service {
 	return &Service{cache: c}
 }
 
@@ -39,8 +39,6 @@ func (s *Service) CreateSession() (string, error) {
 // Updates a session id check-in time.
 // If no session exists then is't created and saved.
 func (s *Service) UpdateSession(id string) error {
-	if len(id) == 0 {
-	}
 	loaded := s.cache.UpdateSession(id)
 	if !loaded {
 		if err := s.createSessionDatabase(id); err != nil {

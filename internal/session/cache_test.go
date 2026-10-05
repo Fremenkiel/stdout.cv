@@ -73,7 +73,7 @@ func TestUpdateSession(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				cache := &Cahce{
+				cache := &Cache{
 					files: make(map[string]string, 1),
 				}
 
@@ -159,7 +159,7 @@ func TestLoadAndDelete(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cache := Cahce{
+			cache := Cache{
 				files: make(map[string]string, len(test.initialState)),
 			}
 
@@ -213,7 +213,7 @@ func TestAddFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
 			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, test.id)
-			cache := &Cahce{
+			cache := &Cache{
 				files: make(map[string]string, 1),
 			}
 
@@ -261,7 +261,7 @@ func TestRemoveFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
 			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, test.id)
-			cache := &Cahce{
+			cache := &Cache{
 				files: make(map[string]string, 1),
 			}
 
@@ -305,7 +305,7 @@ func TestGetFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
 			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, test.id)
-			cache := &Cahce{
+			cache := &Cache{
 				files: make(map[string]string, 1),
 			}
 
