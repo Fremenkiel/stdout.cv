@@ -19,6 +19,8 @@ func NewService(c *Cahce) *Service {
 	return &Service{cache: c}
 }
 
+// Creates a session id, a database file and saves it to the cache.
+// Uses UpdateSession under the hood
 func (s *Service) CreateSession() (string, error) {
 	sessionUuid, err := uuid.NewV7()
 	if err != nil {
@@ -34,7 +36,11 @@ func (s *Service) CreateSession() (string, error) {
 	return id, nil
 }
 
+// Updates a session id check-in time.
+// If no session exists then is't created and saved.
 func (s *Service) UpdateSession(id string) error {
+	if len(id) == 0 {
+	}
 	loaded := s.cache.UpdateSession(id)
 	if !loaded {
 		if err := s.createSessionDatabase(id); err != nil {
@@ -45,6 +51,7 @@ func (s *Service) UpdateSession(id string) error {
 	return nil
 }
 
+// Removes all expired session, alongside any orphant cached file paths and database files not saved in the cache.
 func (s *Service) RemoveExpiredSessions() error {
 	expiredSessions := s.cache.LoadAndDeleteOldSessions()
 

@@ -7,9 +7,10 @@ type Table struct {
 }
 
 type TableListViewData struct {
-	Error		*lib.Error
-	Tables	[]TableViewData
-	Rows		*[]any
+	DatabaseName	string
+	Error					*lib.Error
+	Tables				[]TableViewData
+	Rows					*[]any
 }
 
 type TableViewData struct {

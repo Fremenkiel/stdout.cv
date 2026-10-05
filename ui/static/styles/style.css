@@ -6,7 +6,9 @@
 @import "./abstracts/_typography.css";
 
 /* layout */
-@import url("./layout/_sidebar.css");
+@import url("./layout/_page.css");
+@import url("./layout/_nav.css");
+@import url("./layout/_main.css");
 
 /* components */
 

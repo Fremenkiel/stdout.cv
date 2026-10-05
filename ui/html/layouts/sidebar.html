@@ -1,7 +1,8 @@
 {{ block "sidebar" . }}
-<div class="l-sidebar">
+<h1 class="title">{{ .DatabaseName }}.db</h1>
+<ul class="list">
 {{ range .Tables }}
-<p>{{ .Name }}</p>
+<li>{{ .Name }}</li>
 {{ end }}
-</div>
+</ul>
 {{ end }}

@@ -56,7 +56,6 @@ func main() {
 	mux.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./ui/static/scripts"))))
 	mux.Handle("/styles/", http.StripPrefix("/styles/", http.FileServer(http.Dir("./ui/static/styles"))))
 
-
 	table.NewRouter(mux, tableHandler)
 	row.NewRouter(mux, rowHandler)
 

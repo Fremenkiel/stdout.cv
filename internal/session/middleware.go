@@ -35,10 +35,20 @@ func (m *Middleware) Handle(w http.ResponseWriter, r *http.Request, next func(ht
 			return
 		}
 	} else {
-		if err := m.service.UpdateSession(sessionCookie.Value); err != nil {
-			log.Printf("middlware: error thrown while updating session, %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+		sessionId = sessionCookie.Value
+		if len(sessionId) == 0 {
+			sessionId, err = m.service.CreateSession()
+			if err != nil {
+				log.Printf("middlware: error thrown while creating session, %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		} else {
+			if err := m.service.UpdateSession(sessionId); err != nil {
+				log.Printf("middlware: error thrown while updating session, %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 

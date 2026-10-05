@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/fremenkiel/stdout.cv/internal/platform"
 	"github.com/fremenkiel/stdout.cv/internal/platform/render"
 )
 
@@ -40,10 +41,13 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	viewData := &TableListViewData{
+		DatabaseName: ctx.Value(platform.SessionKey).(string),
 		Tables: make([]TableViewData, len(tables)),
 		Error: nil,
 		Rows: nil,
 	}
+
+log.Printf("db name: %s", viewData.DatabaseName)
 
 	for i := range tables {
 		viewData.Tables[i] = h.getTableViewData(tables[i])
