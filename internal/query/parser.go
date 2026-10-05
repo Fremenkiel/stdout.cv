@@ -24,8 +24,12 @@ func Parse(queryString string) (*Query, error) {
 		if strings.Contains(part, "--") {
 			return nil, ErrQueryNotAllowed
 		}
-		if strings.Contains(part, ";") && i != lastIndex {
+		if strings.Contains(part, ";") {
+			if i != lastIndex {
 			return nil, ErrQueryNotAllowed
+			} else {
+				part = strings.Trim(part, ";")
+			}
 		}
 
 		for _, queryMod := range queryModifiers {

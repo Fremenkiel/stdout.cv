@@ -207,6 +207,22 @@ func TestParse(t *testing.T) {
 			expectedResponse: nil,
 			expectedError: ErrQueryNotAllowed,
 		},
+		{
+			name: "semicolon_at_end",
+			queryString: "select * from users;",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: SELECT,
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
 	}
 
 	for _, test := range tests {
