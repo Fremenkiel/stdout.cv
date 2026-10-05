@@ -135,7 +135,6 @@ func TestParse(t *testing.T) {
 				TableName: "users",
 				Type: UPDATE,
 				Modifiers: []string{
-					FROM,
 					SET,
 					WHERE,
 				},
@@ -185,6 +184,8 @@ func TestParse(t *testing.T) {
 				Modifiers: []string{
 					FROM,
 					WHERE,
+					FROM,
+					WHERE,
 				},
 			},
 			expectedError: nil,
@@ -192,12 +193,6 @@ func TestParse(t *testing.T) {
 		{
 			name: "delete_and_select",
 			queryString: "delete from files where id = 1; select name from users where id = 1;",
-			expectedResponse: nil,
-			expectedError: ErrQueryNotAllowed,
-		},
-		{
-			name: "comment",
-			queryString: "select --name from users where id = 1;",
 			expectedResponse: nil,
 			expectedError: ErrQueryNotAllowed,
 		},
@@ -222,6 +217,89 @@ func TestParse(t *testing.T) {
 				},
 			},
 			expectedError: nil,
+		},
+		{
+			name: "comment",
+			queryString: "-- do not process this part\nselect * from users;",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: SELECT,
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
+		// Will be catched by sqlite
+		{
+			name: "comment_inside",
+			queryString: "select --name from users where id = 1;",
+			expectedResponse: &Query{
+				Fields: []string{},
+				WildcardIndex: -1,
+				TableName: "",
+				Type: SELECT,
+				Modifiers: []string{},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "comment_space_at_line_break",
+			queryString: "-- do not process this part \n select * from users;",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: SELECT,
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "comment_first_space_at_line_break",
+			queryString: "-- do not process this part \nselect * from users;",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: SELECT,
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "comment_last_space_at_line_break",
+			queryString: "-- do not process this part\n select * from users;",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: SELECT,
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "comment_end",
+			queryString: "select * from users;\n-- do not process this part",
+			expectedResponse: nil,
+			expectedError: ErrQueryNotAllowed,
 		},
 	}
 
@@ -250,8 +328,8 @@ func TestParse(t *testing.T) {
 					t.Fatalf("unexpected type: %s, got %s", test.expectedResponse.Type, response.Type)
 				}
 
-				if testutil.SliceEql(test.expectedResponse.Modifiers, response.Modifiers) {
-					t.Fatalf("unexpected type: %s, got %s", test.expectedResponse.Type, response.Type)
+				if !testutil.SliceEql(test.expectedResponse.Modifiers, response.Modifiers) {
+					t.Fatalf("unexpected modifiers: %v, got %v", test.expectedResponse.Modifiers, response.Modifiers)
 				}
 			}
 

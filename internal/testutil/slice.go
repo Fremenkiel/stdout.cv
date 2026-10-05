@@ -1,9 +1,11 @@
 package testutil
 
-import "slices"
+import (
+	"slices"
+)
 
 func SliceEql(slice1 []string, slice2 []string) bool {
-	if s1Len := len(slice1); len(slice2) != s1Len {
+	if len(slice1) != len(slice2) {
 		return false
 	}
 

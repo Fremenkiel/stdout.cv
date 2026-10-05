@@ -6,7 +6,7 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 )
 
-// Parses query string to Query struct. 
+// Parses query string to Query struct.
 // Fields are only populated on queries that would return fields.
 // Multiple queries are not supported.
 func Parse(queryString string) (*Query, error) {
@@ -21,12 +21,22 @@ func Parse(queryString string) (*Query, error) {
 	var current string
 	Outerloop:
 	for i, part := range queryParts {
+		if current == COMMENT {
+			if !strings.Contains(part, "\n") {
+				continue
+			} else {
+				current = ""
+				lineParts := strings.Split(part, "\n")
+				part = lineParts[len(lineParts) - 1]
+			}
+		}
+
 		if strings.Contains(part, "--") {
-			return nil, ErrQueryNotAllowed
+			current = COMMENT
 		}
 		if strings.Contains(part, ";") {
 			if i != lastIndex {
-			return nil, ErrQueryNotAllowed
+				return nil, ErrQueryNotAllowed
 			} else {
 				part = strings.Trim(part, ";")
 			}
@@ -35,6 +45,7 @@ func Parse(queryString string) (*Query, error) {
 		for _, queryMod := range queryModifiers {
 			if strings.EqualFold(part, queryMod) {
 				current = queryMod
+				query.Modifiers = append(query.Modifiers, queryMod)
 				continue Outerloop
 			}
 		}

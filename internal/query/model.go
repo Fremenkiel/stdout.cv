@@ -12,6 +12,8 @@ const (
 	WHERE		string = "WHERE"
 	SET			string = "SET"
 	VALUES	string = "VALUES"
+
+	COMMENT	string = "COMMENT"
 )
 
 var queryTypes []string = []string{
