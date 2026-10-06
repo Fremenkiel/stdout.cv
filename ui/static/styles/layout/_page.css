@@ -2,7 +2,6 @@
   display: grid;
   grid-template:
     'nav query query query'
-    'nav result result result'
     'nav result result result';
   height: 100vh;
 }
@@ -17,9 +16,12 @@
 
 .page__query {
   grid-area: query;
+  height: 40vh;
 }
 
 .page__result {
   grid-area: result;
+  height: 60vh;
+  border-top: 1px solid var(--color-border);
 }
 

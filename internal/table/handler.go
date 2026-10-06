@@ -6,16 +6,20 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform"
-	"github.com/fremenkiel/stdout.cv/internal/platform/render"
+	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
 
+type renderer interface {
+	RenderPage(w http.ResponseWriter, name string, data any) error
+	RenderFragment(w http.ResponseWriter, name string, data any) error
+}
+
 type Handler struct {
-	renderer	render.Renderer
+	renderer	renderer
 	service		*Service
 }
 
-func NewHandler(r render.Renderer, s *Service) *Handler {
+func NewHandler(r renderer, s *Service) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 
@@ -40,16 +44,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData := &TableListViewData{
-		DatabaseName: ctx.Value(platform.SessionKey).(string),
-		Tables: make([]TableViewData, len(tables)),
-		Error: nil,
-		Rows: nil,
-	}
-
-	for i := range tables {
-		viewData.Tables[i] = h.getTableViewData(tables[i])
-	}
+	viewData := h.getTableViewData(tables)
 
 	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
 		log.Printf("table: error thrown while rendering, %v", err)
@@ -57,8 +52,18 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getTableViewData(table *Table) TableViewData {
-	return TableViewData{
-		Name: table.Name,
+func (h *Handler) getTableViewData(tables []*Table) *viewmodels.TableViewData {
+	viewData := &viewmodels.TableViewData{
+		Tables: make([]viewmodels.Table, len(tables)),
+		Error: nil,
+		Result: &viewmodels.Result{},
 	}
+
+	for i := range tables {
+		viewData.Tables[i] = viewmodels.Table{
+			Name: tables[i].Name,
+		}
+	}
+
+	return viewData
 }

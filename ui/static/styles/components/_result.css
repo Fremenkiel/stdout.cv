@@ -1,5 +1,14 @@
-.result {
+.result__header {
+  margin: 0 var(--size-spacing-x);
+}
+
+.result__header--secondary {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.result__body {
   display: flex;
-  margin: var(--size-margin);
+  margin: var(--size-spacing);
 }
 

@@ -2,6 +2,7 @@ package row
 
 import (
 	"context"
+	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/query"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
@@ -24,13 +25,23 @@ func NewService(r *Repository, ss SchemaService) *Service {
 	}
 }
 
-func (s *Service) GetRows(ctx context.Context, queryString string) ([]*Row, error) {
+func (s *Service) GetRows(ctx context.Context, queryString string) (*Result, error) {
 	q, err := s.parseQuery(ctx, queryString)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.repository.GetRows(ctx, queryString, q)
+	start := time.Now()
+	rows, err := s.repository.GetRows(ctx, queryString, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Result{
+		Columns: q.Fields,
+		Rows: rows,
+		Duration: time.Now().UnixMicro() - start.UnixMicro(),
+	}, nil
 }
 
 func (s *Service) parseQuery(ctx context.Context, queryString string) (*query.Query, error) {

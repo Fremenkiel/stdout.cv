@@ -1,0 +1,16 @@
+{{ define "table" }}
+<table class="table">
+  <tr class="table__header">
+    {{ range .Columns }}
+  <th>{{ .Name }}</th>
+    {{ end }}
+  </tr>
+  {{ range .Rows }}
+  <tr class="table__row">
+    {{ range . }}
+    <td>{{ . }}</td>
+    {{ end }}
+  </tr>
+  {{ end }}
+</table>
+{{ end }}

@@ -1,4 +1,4 @@
-package render
+package ui
 
 import (
 	"bytes"
@@ -11,14 +11,12 @@ import (
 	"github.com/fremenkiel/stdout.cv/ui"
 )
 
-type TemplateRenderer struct {
+type Renderer struct {
 	pageCache	map[string]*template.Template
 	base			*template.Template
 }
 
-var _ Renderer = (*TemplateRenderer)(nil)
-
-func NewTemplateRenderer() *TemplateRenderer {
+func NewRenderer() *Renderer {
 	base := template.Must(template.New("").ParseFS(ui.Files, "html/layouts/*.html", "html/components/*.html"))
 
 	cache := map[string]*template.Template{}
@@ -31,10 +29,10 @@ func NewTemplateRenderer() *TemplateRenderer {
 		cache[name] = tmpl
 	}
 
-	return &TemplateRenderer{pageCache: cache, base: base}
+	return &Renderer{pageCache: cache, base: base}
 }
 
-func (r *TemplateRenderer) RenderPage(w http.ResponseWriter, name string, data any) error {
+func (r *Renderer) RenderPage(w http.ResponseWriter, name string, data any) error {
 	var buf bytes.Buffer
 
 	filename := fmt.Sprintf("%s.html", name)
@@ -52,7 +50,7 @@ func (r *TemplateRenderer) RenderPage(w http.ResponseWriter, name string, data a
 	return err
 }
 
-func (r *TemplateRenderer) RenderFragment(w http.ResponseWriter, name string, data any) error {
+func (r *Renderer) RenderFragment(w http.ResponseWriter, name string, data any) error {
 	var buf bytes.Buffer
 
 	if err := r.base.ExecuteTemplate(&buf, name, data); err != nil {

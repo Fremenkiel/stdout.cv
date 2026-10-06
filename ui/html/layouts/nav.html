@@ -1,8 +1,10 @@
 {{ block "nav" . }}
+<nav class="page__nav">
 <h1 class="title">stdout.db</h1>
 <ul class="list">
 {{ range .Tables }}
 <li>{{ .Name }}</li>
 {{ end }}
 </ul>
+</nav>
 {{ end }}

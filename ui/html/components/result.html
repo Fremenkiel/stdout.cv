@@ -1,0 +1,13 @@
+{{ define "result" }}
+<main class="page__result" id="result-main">
+  <div class="result">
+  <div class="header">
+    <h2 class="result__header">Results</h2>
+      <h2 class="result__header--secondary">{{ if .Stats }}{{ .Stats.RowCount }}{{ else }}0{{ end }} Rows · {{ if .Stats }}{{ .Stats.ColumnCount }}{{ else }}0{{ end }} Columns · {{ if .Stats }}{{ .Stats.Duration }}{{ else }}0{{ end }} μs</h2>
+  </div>
+    <div class="result__body">
+      {{ template "table" . }}
+  </div>
+  </div>
+</main>
+{{ end }}

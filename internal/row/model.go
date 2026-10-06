@@ -1,9 +1,9 @@
 package row
 
-type Row []*string
-
-type RowListViewData struct {
-	Rows	[]RowViewData
+type Result struct {
+	Rows			[]*Row
+	Columns		[]string
+	Duration	int64
 }
 
-type RowViewData []string
+type Row []*string

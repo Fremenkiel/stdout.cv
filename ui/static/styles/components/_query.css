@@ -1,4 +1,9 @@
-.query {
+.query__header {
+  margin: 0 var(--size-spacing-x);
+}
+
+.query__body {
+  margin: 0 var(--size-spacing-x);
   padding: 0 14px;
 }
 

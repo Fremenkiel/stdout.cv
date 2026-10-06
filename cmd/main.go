@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
-	"github.com/fremenkiel/stdout.cv/internal/platform/render"
+	"github.com/fremenkiel/stdout.cv/internal/ui"
 	"github.com/fremenkiel/stdout.cv/internal/row"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
@@ -43,7 +43,7 @@ func main() {
 	sessionService := session.NewService(sessionCache)
 	tableService := table.NewService(tableRepo)
 
-	renderer := render.NewTemplateRenderer()
+	renderer := ui.NewRenderer()
 
 	rowHandler := row.NewHandler(renderer, rowService)
 	tableHandler := table.NewHandler(renderer, tableService)

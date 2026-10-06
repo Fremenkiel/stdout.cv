@@ -5,19 +5,8 @@
     {{ template "header.html" . }}
   </head>
   <body>
-    <div class="page">
-      <nav class="page__nav">
-        {{ template "nav" . }}
-      </nav>
-      <main class="page__query">
-        {{ block "query" . }}
-        {{ end }}
-      </main>
-      <main class="page__result">
-        {{ block "result" . }}
-        {{ end }}
-      </main>
-    </div>
+    {{ block "body" . }}
+    {{ end }}
   </body>
 </html>
 {{ end }}

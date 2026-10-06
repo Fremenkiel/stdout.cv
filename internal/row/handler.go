@@ -8,16 +8,21 @@ import (
 	"strings"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
-	"github.com/fremenkiel/stdout.cv/internal/platform/render"
 	"github.com/fremenkiel/stdout.cv/internal/query"
+	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
 
+type renderer interface {
+	RenderPage(w http.ResponseWriter, name string, data any) error
+	RenderFragment(w http.ResponseWriter, name string, data any) error
+}
+
 type Handler struct {
-	renderer	render.Renderer
+	renderer	renderer
 	service		*Service
 }
 
-func NewHandler(r render.Renderer, s *Service) *Handler {
+func NewHandler(r renderer, s *Service) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 
@@ -26,7 +31,7 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 
 	queryString := r.URL.Query().Get("query")
 
-	rows, err := h.service.GetRows(ctx, queryString)
+	result, err := h.service.GetRows(ctx, queryString)
 	if err != nil {
 		if errors.Is(err, query.ErrQueryNotAllowed) {
 			w.WriteHeader(http.StatusUnprocessableEntity)
@@ -55,7 +60,7 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 
 	if strings.Contains(r.Header.Get("Accept"), "application/json") {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(rows)
+		json.NewEncoder(w).Encode(result)
 		return
 	}
 
@@ -65,26 +70,42 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData := &RowListViewData{
-		Rows: make([]RowViewData, len(rows)),
-	}
+	viewData := h.getResultViewData(result)
 
-	for i := range rows {
-		viewData.Rows[i] = h.getRowViewData(rows[i])
-	}
-
-	if err := h.renderer.RenderFragment(w, "row-container", viewData); err != nil {
+	if err := h.renderer.RenderFragment(w, "result", viewData); err != nil {
 		log.Printf("row: error thrown while rendering, %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (h *Handler) getRowViewData(row *Row) RowViewData {
-	var viewData RowViewData
+func (h *Handler) getResultViewData(result *Result) *viewmodels.ResultViewData {
+	viewData := &viewmodels.ResultViewData{
+		Stats: &viewmodels.Stats{
+			RowCount: uint16(len(result.Rows)),
+			ColumnCount: uint16(len(result.Columns)),
+			Duration: result.Duration,
+		},
+		Rows: make([]viewmodels.Row, len(result.Rows)),
+		Columns: make(viewmodels.ColumnList, len(result.Columns)),
+	}
 
-	for _, str := range *row {
-		viewData = append(viewData, *str)
+	for i := range result.Rows {
+		viewData.Rows[i] = h.getRowViewModel(result.Rows[i])
+	}
+
+	for i, column := range result.Columns {
+		viewData.Columns[i].Name = column
 	}
 
 	return viewData
+}
+
+func (h *Handler) getRowViewModel(row *Row) viewmodels.Row {
+	viewModel := make(viewmodels.Row, len(*row))
+
+	for i, val := range *row {
+		viewModel[i] = *val
+	}
+
+	return viewModel
 }
