@@ -5,10 +5,10 @@
     <h2 class="query__header">Query</h2>
   </div>
     <div class="query__body">
-    <form hx-get="/rows" hx-target="#result-main" hx-swap="outerHTML">
+    <form hx-get="/rows" id="form-query" hx-target="#result-main" hx-swap="outerHTML">
       <textarea class="query__textarea" id="textarea-query" name="query">-- Write a query to the database to find all the info.
 SELECT * FROM users WHERE id = 1;</textarea>
-      <button class="button query__submit" type="submit">Run</button>
+      <button class="button query__submit" id="submit-query" type="submit">Run</button>
     </form>
   </div>
   </div>

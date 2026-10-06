@@ -4,3 +4,10 @@ var editor = CodeMirror.fromTextArea(document.getElementById('textarea-query'), 
   keyMap: 'vim',
 });
 
+document.addEventListener('keydown', (e) => {
+  if (e.key === "Enter" &&
+    (e.composed || e.ctrlKey)) {
+    document.getElementById('submit-query').click();
+  }
+});
+
