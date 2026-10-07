@@ -9,6 +9,7 @@ type TableViewData struct {
 }
 
 type Table struct {
-	Name 		string
-	Schema	ColumnList
+	Name 			string
+	RowCount	int16
+	Columns		*ColumnList
 }

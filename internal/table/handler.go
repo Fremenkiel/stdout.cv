@@ -62,8 +62,24 @@ func (h *Handler) getTableViewData(tables []*Table) *viewmodels.TableViewData {
 	for i := range tables {
 		viewData.Tables[i] = viewmodels.Table{
 			Name: tables[i].Name,
+			RowCount: tables[i].RowCount,
+			Columns: h.getColumnViewData(tables[i].Columns),
 		}
 	}
 
 	return viewData
+}
+
+func (h *Handler) getColumnViewData(columns []*Column) *viewmodels.ColumnList {
+	viewData := make(viewmodels.ColumnList, len(columns))
+
+	for i := range columns {
+		viewData[i] = viewmodels.Column{
+			Name: columns[i].Name,
+			Type: columns[i].Type,
+			PrivateKey: columns[i].IsKey,
+		}
+	}
+
+	return &viewData
 }

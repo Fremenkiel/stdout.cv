@@ -1,151 +1,104 @@
 package main
 
 import (
-	"crypto/rand"
+	"bytes"
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 )
 
-const (
-	SELECT string = "SELECT"
-	DELETE string = "DELETE"
-	INSERT string = "INSERT"
-	UPDATE string = "UPDATE"
-)
-
-var queryTypeMap map[string]struct{} = map[string]struct{}{
-	SELECT: {},
-	DELETE: {},
-	INSERT: {},
-	UPDATE: {},
+var tableNames []string = []string{
+	"test1",
+	"test2",
+	"test3",
+	"test4",
+	"test5",
+	"test6",
+	"test78",
+	"testfgs",
+	"testgsd",
+	"test6433",
+	"testrter",
+	"testjfgwr",
+	"test556e",
+	"test56wt",
+	"testy54y34wrg",
+	"test4tw",
+	"test4tw",
+	"test1j4wt34",
+	"test1rgfrweg",
 }
 
-var queryTypeSlice []string = []string{
-	SELECT,
-	DELETE,
-	INSERT,
-	UPDATE,
-}
+var globalQuery string
 
-var regexMatch *regexp.Regexp = regexp.MustCompile("(?i)SELECT|UPDATE|DELETE|INSERT")
-
-const query string = "select name, age, email, address, zip_code, city, country, phone_number, password_hash, FROM users WHERE country LIKE 'mark' AND age >= 25 AND age <= 30 AND email LIKE 'gmail' AND first_name = '%s';"
-
-func BenchmarkPerformanceEql1(b *testing.B) {
+func BenchmarkPerformanceConcat1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		q := fmt.Sprintf(query, rand.Text())
+		querySlice := make([]string, len(tableNames))
 
-		qParts := strings.Split(q, " ")
+		for i, name := range tableNames {
+			querySlice[i] = fmt.Sprintf(`
+				SELECT * FROM pragma_table_info('%s');
+				`, name)
+		}
 
-		var typeFound bool
-		for pi := range qParts {
-			for si := range queryTypeSlice {
-				if strings.EqualFold(qParts[pi], queryTypeSlice[si]) {
-					typeFound = true
-				}
-			}
-		}
-		if !typeFound {
-			b.Fatal("No type found")
-		}
+		query := strings.Join(querySlice, "")
+
+		globalQuery = query
 	}
 }
 
-func BenchmarkPerformanceEql2(b *testing.B) {
+func BenchmarkPerformanceConcat2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		q := fmt.Sprintf(query, rand.Text())
+		var query string
 
-		qParts := strings.Split(q, " ")
+		for _, name := range tableNames {
+			query += fmt.Sprintf(`
+				SELECT * FROM pragma_table_info('%s');
+				`, name)
+		}
 
-		var typeFound bool
-		for _, part := range qParts {
-			for si := range queryTypeSlice {
-				if strings.EqualFold(part, queryTypeSlice[si]) {
-					typeFound = true
-				}
-			}
-		}
-		if !typeFound {
-			b.Fatal("No type found")
-		}
+		globalQuery = query
 	}
 }
 
-func BenchmarkPerformanceEql3(b *testing.B) {
+func BenchmarkPerformanceConcat3(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		q := fmt.Sprintf(query, rand.Text())
+		var query string
 
-		qParts := strings.Split(q, " ")
+		for _, name := range tableNames {
+			query = fmt.Sprintf(`
+				%sSELECT * FROM pragma_table_info('%s');
+				`, query, name)
+		}
 
-		var typeFound bool
-		for pi := range qParts {
-			for _, qt := range queryTypeSlice {
-				if strings.EqualFold(qParts[pi], qt) {
-					typeFound = true
-				}
-			}
-		}
-		if !typeFound {
-			b.Fatal("No type found")
-		}
+		globalQuery = query
 	}
 }
 
-func BenchmarkPerformanceEql4(b *testing.B) {
+func BenchmarkPerformanceConcat4(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		q := fmt.Sprintf(query, rand.Text())
+		var buf bytes.Buffer
 
-		qParts := strings.Split(q, " ")
+		for _, name := range tableNames {
+			buf.WriteString(fmt.Sprintf(`
+				SELECT * FROM pragma_table_info('%s');
+				`, name))
+		}
 
-		var typeFound bool
-		for _, part := range qParts {
-			for _, qt := range queryTypeSlice {
-				if strings.EqualFold(part, qt) {
-					typeFound = true
-				}
-			}
-		}
-		if !typeFound {
-			b.Fatal("No type found")
-		}
+		globalQuery = buf.String()
 	}
 }
 
-func BenchmarkPerformanceToUpper(b *testing.B) {
+func BenchmarkPerformanceConcat5(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		q := fmt.Sprintf(query, rand.Text())
+		var builder strings.Builder
 
-		qParts := strings.Split(q, " ")
-
-		var typeFound bool
-		for pi := range qParts {
-			uStr := strings.ToUpper(qParts[pi])
-			if _, ok := queryTypeMap[uStr]; ok {
-				typeFound = true
-			}
+		for _, name := range tableNames {
+			builder.WriteString(fmt.Sprintf(`
+				SELECT * FROM pragma_table_info('%s');
+				`, name))
 		}
-		if !typeFound {
-			b.Fatal("No type found")
-		}
-	}
-}
 
-func BenchmarkPerformanceRegex(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		q := fmt.Sprintf(query, rand.Text())
-
-		qParts := strings.Split(q, " ")
-
-		var typeFound bool
-		for pi := range qParts {
-			if ok := regexMatch.MatchString(qParts[pi]); ok {
-				typeFound = true
-			}
-		}
-		if !typeFound {
-			b.Fatal("No type found")
-		}
+		globalQuery = builder.String()
 	}
 }

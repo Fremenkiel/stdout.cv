@@ -41,7 +41,7 @@ func main() {
 	schemaService := schema.NewService(schemaRepo)
 	rowService := row.NewService(rowRepo, schemaService)
 	sessionService := session.NewService(sessionCache)
-	tableService := table.NewService(tableRepo)
+	tableService := table.NewService(tableRepo, schemaService)
 
 	renderer := ui.NewRenderer()
 

@@ -1,15 +1,29 @@
 package table
 
-import "context"
+import (
+	"context"
 
-type Service struct {
-	repository	*Repository
+)
+
+type SchemaService interface {
+	GetSchemas(ctx context.Context, tables []*Table) ([]*Table, error)
 }
 
-func NewService(r *Repository) *Service {
-	return &Service{repository: r}
+type Service struct {
+	repository		*Repository
+	schemaService	SchemaService
+}
+
+func NewService(r *Repository, ss SchemaService) *Service {
+	return &Service{repository: r, schemaService: ss}
 }
 
 func (s *Service) GetTables(ctx context.Context) ([]*Table, error) {
-	return s.repository.GetTables(ctx)
+	tables, err := s.repository.GetTables(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return tables, nil
+
+	// return s.schemaService.GetSchemas(ctx, tables)
 }

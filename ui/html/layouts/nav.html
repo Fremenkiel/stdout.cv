@@ -1,10 +1,38 @@
 {{ block "nav" . }}
 <nav class="page__nav">
-<h1 class="title">stdout.db</h1>
-<ul class="list">
+  <div class="nav__header">
+    <span class="nav__icon">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 18V6" stroke-linecap="round"/>
+      <path d="M20 6V18" stroke-linecap="round"/>
+      <path d="M12 10C16.4183 10 20 8.20914 20 6C20 3.79086 16.4183 2 12 2C7.58172 2 4 3.79086 4 6C4 8.20914 7.58172 10 12 10Z"/>
+      <path d="M20 12C20 14.2091 16.4183 16 12 16C7.58172 16 4 14.2091 4 12"/>
+      <path d="M20 18C20 20.2091 16.4183 22 12 22C7.58172 22 4 20.2091 4 18"/>
+    </svg>
+    </span>
+    <h1 class="title nav__title">stdout.db</h1>
+  </div>
+<ul class="nav__list">
 {{ range .Tables }}
-<li>{{ .Name }}</li>
+    <li>
+      {{ template "nav-table" . }}
+      </li>
 {{ end }}
 </ul>
 </nav>
+{{ end }}
+
+{{ define "nav-table" }}
+<div class="schema">
+  <span class="schema__header">{{ .Name }}{{ .RowCount }}</span>
+<ul class="schema__list">
+    {{ range .Columns }}
+    <li>
+      <span class="schema__name">{{ .Name }}</span>
+      <span class="schema__type">{{ .Type }}{{ if .PrivateKey }}PK{{ end }}</span>
+    </li>
+    {{ end }}
+</ul>
+</div>
+
 {{ end }}

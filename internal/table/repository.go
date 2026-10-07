@@ -3,6 +3,7 @@ package table
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform"
 	_ "modernc.org/sqlite"
@@ -22,8 +23,8 @@ func NewRepository(sc SessionCache) *Repository {
 
 func (r *Repository) GetTables(ctx context.Context) ([]*Table, error) {
 	query := `
-	SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%';
-`
+	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%';
+	`
 
 	databaseName, err := r.sessionCache.GetFile(ctx.Value(platform.SessionKey).(string))
 	db, err := sql.Open("sqlite", databaseName)
@@ -45,6 +46,15 @@ func (r *Repository) GetTables(ctx context.Context) ([]*Table, error) {
 		if err := rows.Scan(&table.Name); err != nil {
 			return nil, err
 		}
+
+		countQuery := fmt.Sprintf(`
+			SELECT COUNT(*) FROM %s;
+			`, table.Name)
+
+		if err := db.QueryRowContext(ctx, countQuery).Scan(&table.RowCount); err != nil {
+			return nil, err
+		}
+
 		tables = append(tables, &table)
 	}
 

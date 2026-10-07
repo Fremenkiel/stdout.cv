@@ -8,8 +8,8 @@
 
 .page__nav {
   grid-area: nav;
-  display: flex;
   height: 100vh;
+  width: var(--size-nav-width);
   background-color: var(--color-background-secondary);
   border-right: 1px solid var(--color-border);
 }
@@ -17,11 +17,13 @@
 .page__query {
   grid-area: query;
   height: 40vh;
+  width: calc(100vw - var(--size-nav-width));
 }
 
 .page__result {
   grid-area: result;
   height: 60vh;
+  width: calc(100vw - var(--size-nav-width));
   border-top: 1px solid var(--color-border);
 }
 

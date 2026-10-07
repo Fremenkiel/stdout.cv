@@ -1,4 +1,6 @@
 body {
+  --size-nav-width: 25vw;
+
   --size-spacing-x: 12px;
   --size-spacing: 20px var(--size-spacing-x);
 
