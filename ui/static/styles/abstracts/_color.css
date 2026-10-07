@@ -1,7 +1,15 @@
 body {
   --color-primary: #406ee5;
+  --color-primary-hover: #355fcd;
+
   --color-background-primary: #fff;
+  --color-background-primary-hover: #eef0f4;
+
   --color-background-secondary: #f7f8fa;
+
+  --color-active: #ebf1fd;
+  --color-active-hover: #eef0f4;
+
 
   --color-text-primary: #1b1f27;
   --color-text-secondary: #8a90a0;

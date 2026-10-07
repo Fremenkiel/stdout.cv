@@ -3,8 +3,9 @@ package viewmodels
 type ColumnList []Column
 
 type Column struct {
-	Name				string
-	Type				string
-	PrivateKey,
-	ForeignKey	bool
+	Name					string
+	Type					string
+	IsNullable		bool
+	IsPrimaryKey	bool
+	IsForeignKey	bool
 }

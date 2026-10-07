@@ -1,16 +1,23 @@
 .nav__header {
   display: flex;
   width: auto;
-  padding: var(--size-spacing);
-  gap: var(--size-spacing-x);
+  margin: var(--size-spacing);
+  gap: calc(2 * var(--size-spacing-x));
   align-items: center;
-  justify-content: center;
+}
+
+.nav__subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .nav__icon {
   display: flex;
-  height: 32px;
-  width: 32px;
+  height: 28px;
+  width: 28px;
+  margin-left: var(--size-spacing-x);
   align-items: center;
   justify-content: center;
   background-color: var(--color-primary);
@@ -18,12 +25,16 @@
 }
 
 .nav__icon svg {
-  height: 24px;
-  width: 24px;
+  height: 16px;
+  width: 16px;
   stroke: var(--color-text-contrast);
   stroke-width: 2px;
 }
 
 .nav__list {
-  padding: var(--size-spacing);
+  margin: var(--size-spacing);
+}
+
+.nav__list>li {
+  margin: var(--size-spacing);
 }

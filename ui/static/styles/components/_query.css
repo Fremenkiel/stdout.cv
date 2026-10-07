@@ -11,6 +11,12 @@
   position: fixed;
   top: 20px;
   right: 14px;
-  background-color: var(--color-primary);
-  color: var(--color-text-contrast);
+}
+
+.query__submit svg {
+  height: 10px;
+  width: 9px;
+  stroke: var(--color-text-contrast);
+  fill: var(--color-text-contrast);
+  margin-right: 6px;
 }

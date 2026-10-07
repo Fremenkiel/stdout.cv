@@ -77,8 +77,9 @@ func (h *Handler) getColumnViewData(columns []*Column) *viewmodels.ColumnList {
 		viewData[i] = viewmodels.Column{
 			Name: columns[i].Name,
 			Type: columns[i].Type,
-			PrivateKey: columns[i].IsPrimaryKey,
-			ForeignKey: columns[i].IsForeignKey,
+			IsPrimaryKey: columns[i].IsPrimaryKey,
+			IsForeignKey: columns[i].IsForeignKey,
+			IsNullable: columns[i].IsNullable,
 		}
 	}
 

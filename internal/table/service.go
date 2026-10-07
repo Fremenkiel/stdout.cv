@@ -6,7 +6,7 @@ import (
 )
 
 type SchemaService interface {
-	GetSchemas(ctx context.Context, tables []*Table) ([]*Table, error)
+	GetSchema(ctx context.Context, name string) ([]*Column, error)
 }
 
 type Service struct {
@@ -24,5 +24,11 @@ func (s *Service) GetTables(ctx context.Context) ([]*Table, error) {
 		return nil, err
 	}
 
-	return s.schemaService.GetSchemas(ctx, tables)
+	for i := range tables {
+		tables[i].Columns, err = s.schemaService.GetSchema(ctx, tables[i].Name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return tables, nil
 }

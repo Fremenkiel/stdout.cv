@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fremenkiel/stdout.cv/internal/schema"
+	"github.com/fremenkiel/stdout.cv/internal/table"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
@@ -62,14 +62,14 @@ func TestGetRow(t *testing.T) {
 
 type testSchemaService struct {
 	tableName		string
-	tableSchema	[]*schema.Schema
+	tableSchema	[]*table.Column
 }
 
 func NewTestSchemaService(tableName string, tableSchemaSlice []string) *testSchemaService {
-	tableSchema := make([]*schema.Schema, len(tableSchemaSlice))
+	tableSchema := make([]*table.Column, len(tableSchemaSlice))
 
 	for i, column := range tableSchemaSlice {
-		tableSchema[i] = &schema.Schema{
+		tableSchema[i] = &table.Column{
 			Name: column,
 		}
 	}
@@ -80,7 +80,7 @@ func NewTestSchemaService(tableName string, tableSchemaSlice []string) *testSche
 	}
 }
 
-func (s *testSchemaService) GetSchema(ctx context.Context, name string) ([]*schema.Schema, error) {
+func (s *testSchemaService) GetSchema(ctx context.Context, name string) ([]*table.Column, error) {
 	if name != s.tableName {
 		return nil, fmt.Errorf("Unknown table, %s got %s", s.tableName, name)
 	}

@@ -12,6 +12,9 @@
     </span>
     <h1 class="title nav__title">stdout.db</h1>
   </div>
+<div class="nav__subtitle">
+  <h3>Tables</h3>
+  </div>
 <ul class="nav__list">
 {{ range .Tables }}
     <li>
@@ -23,16 +26,22 @@
 {{ end }}
 
 {{ define "nav-table" }}
-<div class="schema">
-  <span class="schema__header">{{ .Name }}{{ .RowCount }}</span>
-<ul class="schema__list">
+<details class="schema">
+  <summary class="schema__header">
+    <div class="schema__name">
+      <svg class="schema__icon"><path data-dc-tpl="117" d="M4 2.5 7.5 6 4 9.5" fill="none"stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span>{{ .Name }}</span>
+    </div>
+    <span>{{ .RowCount }}</span>
+  </summary>
+  <ul class="schema__list" id="js-list-schema-{{ .Name }}" >
     {{ range .Columns }}
     <li>
       <span class="schema__name">{{ .Name }}</span>
-      <span class="schema__type">{{ .Type }}{{ if .PrivateKey }}PK{{ end }}</span>
+      <span class="schema__type">{{ .Type }}{{ if not .IsNullable }} NOT NULL{{ end }}{{ if .IsPrimaryKey }} PK{{ end }}{{ if .IsForeignKey }} FK{{ end }}</span>
     </li>
     {{ end }}
 </ul>
-</div>
+</details>
 
 {{ end }}

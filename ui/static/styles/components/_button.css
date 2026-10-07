@@ -1,6 +1,25 @@
 .button {
-  padding: 7px 8px;
+  padding: var(--size-padding);
   font-weight: 500;
   border: 0;
   border-radius: var(--size-border-radius);
 }
+
+.button {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.button:hover {
+  background-color: var(--color-background-hover);
+}
+
+.button--primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-contrast);
+}
+
+.button--primary:hover {
+  background-color: var(--color-primary-hover);
+}
+

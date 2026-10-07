@@ -18,10 +18,6 @@ func NewService(r *Repository) *Service {
 	return &Service{repository: r}
 }
 
-func (s *Service) GetSchemas(ctx context.Context, tables []*table.Table) ([]*table.Table, error) {
-	return s.repository.GetSchemas(ctx, tables)
-}
-
 func (s *Service) GetSchema(ctx context.Context, name string) ([]*table.Column, error) {
 	return s.repository.GetSchema(ctx, name)
 }
