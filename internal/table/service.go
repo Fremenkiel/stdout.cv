@@ -23,7 +23,6 @@ func (s *Service) GetTables(ctx context.Context) ([]*Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	return tables, nil
 
-	// return s.schemaService.GetSchemas(ctx, tables)
+	return s.schemaService.GetSchemas(ctx, tables)
 }

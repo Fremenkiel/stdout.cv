@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform"
@@ -24,21 +25,32 @@ func NewRepository(sc SessionCache) *Repository {
 }
 
 func (r *Repository) GetSchemas(ctx context.Context, tables []*table.Table) ([]*table.Table, error) {
+	fkQuerySlice := make([]string, len(tables))
 	querySlice := make([]string, len(tables))
 
 	for i := range tables {
+		fkQuerySlice[i] = fmt.Sprintf(`
+			SELECT "from" FROM pragma_foreign_key_list('%s');
+			`, tables[i].Name)
 		querySlice[i] = fmt.Sprintf(`
 			SELECT * FROM pragma_table_info('%s');
 			`, tables[i].Name)
 	}
 
+	fkQuery := strings.Join(fkQuerySlice, "")
 	query := strings.Join(querySlice, "")
 
 	databaseName, err := r.sessionCache.GetFile(ctx.Value(platform.SessionKey).(string))
-	db, err := sql.Open("sqlite", databaseName)
+	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?_foreign_keys=on", databaseName))
 	if err != nil {
 		return nil, err
 	}
+
+	fkRows, err := db.QueryContext(ctx, fkQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer fkRows.Close()
 
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
@@ -47,6 +59,18 @@ func (r *Repository) GetSchemas(ctx context.Context, tables []*table.Table) ([]*
 	defer rows.Close()
 
 	for i := range tables {
+		fkMap := make(map[string]struct{})
+		for fkRows.Next() {
+			var columnName string
+			if err := fkRows.Scan(
+				&columnName,
+				); err != nil {
+				return nil, err
+			}
+
+			fkMap[columnName] = struct{}{}
+		}
+
 		for rows.Next() {
 			var column table.Column
 			var defaultValue []byte
@@ -57,10 +81,16 @@ func (r *Repository) GetSchemas(ctx context.Context, tables []*table.Table) ([]*
 				&column.Type,
 				&column.IsNullable,
 				&defaultValue,
-				&column.IsKey,
+				&column.IsPrimaryKey,
 				); err != nil {
 				return nil, err
 			}
+
+			log.Printf("%s: table %s", column.Name, tables[i].Name)
+
+			_, ok := fkMap[column.Name]
+			column.IsForeignKey = ok
+
 			tables[i].Columns = append(tables[i].Columns, &column)
 		}
 	}
@@ -101,7 +131,7 @@ func (r *Repository) GetSchema(ctx context.Context, name string) ([]*table.Colum
 			&column.Type,
 			&column.IsNullable,
 			&defaultValue,
-			&column.IsKey,
+			&column.IsPrimaryKey,
 			); err != nil {
 			return nil, err
 		}

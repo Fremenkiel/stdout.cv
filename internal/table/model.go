@@ -12,5 +12,6 @@ type Column struct {
 	Type					string
 	IsNullable		bool
 	DefaultValue	string
-	IsKey					bool
+	IsPrimaryKey	bool
+	IsForeignKey	bool
 }
