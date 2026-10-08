@@ -3,7 +3,7 @@ package query
 import (
 	"strings"
 
-	"github.com/fremenkiel/stdout.cv/internal/table"
+	"github.com/fremenkiel/stdout.cv/internal/column"
 )
 
 // Parses query string to Query struct.
@@ -76,7 +76,7 @@ func Parse(queryString string) (*Query, error) {
 	return query, nil
 }
 
-func AppendWildcardSchema(wildcardIndex int16, fields []string, schema []*table.Column) ([]string, error) {
+func AppendWildcardSchema(wildcardIndex int16, fields []string, schema []*column.Column) ([]string, error) {
 	if fields[wildcardIndex] != "*" {
 		return nil, ErrFieldNotWildcard
 	}

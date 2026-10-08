@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform"
-	"github.com/fremenkiel/stdout.cv/internal/table"
+	"github.com/fremenkiel/stdout.cv/internal/column"
+	"github.com/fremenkiel/stdout.cv/internal/session"
 	_ "modernc.org/sqlite"
 )
 
@@ -22,7 +22,7 @@ func NewRepository(sc SessionCache) *Repository {
 	return &Repository{sessionCache: sc}
 }
 
-func (r *Repository) GetSchema(ctx context.Context, name string) ([]*table.Column, error) {
+func (r *Repository) GetSchema(ctx context.Context, name string) ([]*column.Column, error) {
 	fkQuery := fmt.Sprintf(`
 			SELECT "from" FROM pragma_foreign_key_list('%s');
 			`, name)
@@ -30,7 +30,12 @@ func (r *Repository) GetSchema(ctx context.Context, name string) ([]*table.Colum
 			SELECT * FROM pragma_table_info('%s');
 			`, name)
 
-	databaseName, err := r.sessionCache.GetFile(ctx.Value(platform.SessionKey).(string))
+	sessionId, err := session.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	databaseName, err := r.sessionCache.GetFile(sessionId)
 	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?_foreign_keys=on", databaseName))
 	if err != nil {
 		return nil, err
@@ -60,9 +65,9 @@ func (r *Repository) GetSchema(ctx context.Context, name string) ([]*table.Colum
 		fkMap[columnName] = struct{}{}
 	}
 
-	var columns []*table.Column
+	var columns []*column.Column
 	for rows.Next() {
-		var column table.Column
+		var column column.Column
 		var defaultValue []byte
 
 		if err := rows.Scan(

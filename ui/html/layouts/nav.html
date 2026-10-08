@@ -13,7 +13,7 @@
     <h1 class="title nav__title">stdout.db</h1>
   </div>
 <div class="nav__subtitle">
-  <h3>Tables</h3>
+  <h4>Tables</h4>
   </div>
 <ul class="nav__list">
 {{ range .Tables }}
@@ -28,13 +28,15 @@
 {{ define "nav-table" }}
 <details class="schema">
   <summary class="schema__header">
-    <div class="schema__name">
+    <div class="schema__header--primary">
       <svg class="schema__icon"><path data-dc-tpl="117" d="M4 2.5 7.5 6 4 9.5" fill="none"stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      <span>{{ .Name }}</span>
+      <h3>{{ .Name }}</h3>
     </div>
-    <span>{{ .RowCount }}</span>
+    <div class="schema__header--secondary">
+      <span>{{ .RowCount }}</span>
+    </div>
   </summary>
-  <ul class="schema__list" id="js-list-schema-{{ .Name }}" >
+  <ul class="schema__list">
     {{ range .Columns }}
     <li>
       <span class="schema__name">{{ .Name }}</span>

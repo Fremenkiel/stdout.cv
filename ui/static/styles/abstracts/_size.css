@@ -1,10 +1,16 @@
 body {
   --size-nav-width: 25vw;
 
-  --size-spacing-x: 12px;
-  --size-spacing: 20px var(--size-spacing-x);
+  --size-margin-x: 12px;
+  --size-margin-y: 20px;
+  --size-margin: var(--size-margin-y) var(--size-margin-x);
 
-  --size-padding: 10px var(--size-spacing-x);
+  --size-nav-margin-x: 24px;
+  --size-nav-margin: var(--size-margin-y) var(--size-nav-margin-x);
+
+  --size-padding-x: 12px;
+  --size-padding-y: 10px;
+  --size-padding: var(--size-padding-y) var(--size-padding-x);
 
   --size-border-radius: 7px;
 }

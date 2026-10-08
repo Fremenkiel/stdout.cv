@@ -114,7 +114,7 @@ func (s *Service) createSessionDatabase(id string) error {
 }
 
 func (s *Service) removeSessionDatabase(id string) error {
-	if err := os.Remove(fmt.Sprintf(database.DatabaseFileNameTemplate, id)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(fmt.Sprintf(s.cache.databaseFileNameTemplate, id)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	s.cache.RemoveFile(id)

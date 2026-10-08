@@ -8,17 +8,20 @@ import (
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform/database"
+	"github.com/fremenkiel/stdout.cv/internal/testutil"
 	"github.com/google/uuid"
 )
 
 func TestCreateSession(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(database.TestDatabaseFileNameTemplate)
 	service := NewService(cache)
 
 	id, err := service.CreateSession()
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := NewContext(t.Context(), id)
+	defer testutil.CleanupSession(ctx)
 
 	if _, ok := cache.sessions.Load(id); !ok {
 		t.Fatal("session not saved in cache")
@@ -46,7 +49,7 @@ func TestServiceUpdateSession(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cache := NewCache()
+			cache := NewCache(database.TestDatabaseFileNameTemplate)
 			service := NewService(cache)
 
 			sessionUuid, err := uuid.NewV7()
@@ -64,6 +67,8 @@ func TestServiceUpdateSession(t *testing.T) {
 			if err := service.UpdateSession(id); err != nil {
 				t.Fatal(err)
 			}
+			ctx := NewContext(t.Context(), id)
+			defer testutil.CleanupSession(ctx)
 
 			if _, ok := cache.sessions.Load(id); !ok {
 				t.Fatal("session not saved in cache")
@@ -154,7 +159,7 @@ func TestRemoveExpiredSessions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cache := NewCache()
+			cache := NewCache(database.TestDatabaseFileNameTemplate)
 			service := NewService(cache)
 
 			var expired []string
@@ -173,7 +178,7 @@ func TestRemoveExpiredSessions(t *testing.T) {
 			}
 
 			id := sessionUuid.String()
-			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, id)
+			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, id)
 
 			expired = append(expired, id)
 
@@ -217,7 +222,7 @@ func TestRemoveExpiredSessions(t *testing.T) {
 }
 
 func TestCreateSessionDatabase(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(database.TestDatabaseFileNameTemplate)
 	service := NewService(cache)
 
 	if err := ensureFolder(); err != nil {
@@ -232,6 +237,8 @@ func TestCreateSessionDatabase(t *testing.T) {
 	if err := service.createSessionDatabase(id.String()); err != nil {
 		t.Fatal(err)
 	}
+	ctx := NewContext(t.Context(), id.String())
+	defer testutil.CleanupSession(ctx)
 
 	if len(cache.files) != 1 {
 		t.Fatalf("unexpected file slice len, 1 got %d", len(cache.files))
@@ -248,7 +255,7 @@ func TestCreateSessionDatabase(t *testing.T) {
 }
 
 func TestRemoveSessionDatabase(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(database.TestDatabaseFileNameTemplate)
 	service := NewService(cache)
 
 	id, err := uuid.NewV7()

@@ -12,17 +12,17 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
 
-type renderer interface {
+type Renderer interface {
 	RenderPage(w http.ResponseWriter, name string, data any) error
 	RenderFragment(w http.ResponseWriter, name string, data any) error
 }
 
 type Handler struct {
-	renderer	renderer
+	renderer	Renderer
 	service		*Service
 }
 
-func NewHandler(r renderer, s *Service) *Handler {
+func NewHandler(r Renderer, s *Service) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 

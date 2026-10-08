@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 )
 
 type Cache struct {
-	sessions	sync.Map
-	files			map[string]string
+	databaseFileNameTemplate	string
+	sessions									sync.Map
+	files											map[string]string
 }
 
-func NewCache() *Cache {
+func NewCache(dbNameTemplate string) *Cache {
 	return &Cache{
+		databaseFileNameTemplate: dbNameTemplate,
 		files: make(map[string]string),
 	}
 }
@@ -62,7 +62,7 @@ func (c *Cache) LoadAndDeleteOldSessions() []string {
 
 // Adds session database file path to cache
 func (c *Cache) AddFile(id string) string {
-	filePath := fmt.Sprintf(database.DatabaseFileNameTemplate, id)
+	filePath := fmt.Sprintf(c.databaseFileNameTemplate, id)
 
 	c.files[id] = filePath
 

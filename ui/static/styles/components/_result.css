@@ -1,5 +1,5 @@
 .result__header {
-  margin: 0 var(--size-spacing-x);
+  margin: 0 var(--size-margin-x);
 }
 
 .result__header--secondary {
@@ -9,6 +9,6 @@
 
 .result__body {
   display: flex;
-  margin: var(--size-spacing);
+  margin: var(--size-margin);
 }
 

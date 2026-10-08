@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform"
 	"github.com/fremenkiel/stdout.cv/internal/query"
+	"github.com/fremenkiel/stdout.cv/internal/session"
 	_ "modernc.org/sqlite"
 )
 
@@ -22,7 +22,12 @@ func NewRepository(sc SessionCache) *Repository {
 }
 
 func (r *Repository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
-	databaseName, err := r.sessionCache.GetFile(ctx.Value(platform.SessionKey).(string))
+	sessionId, err := session.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	databaseName, err := r.sessionCache.GetFile(sessionId)
 	db, err := sql.Open("sqlite", databaseName)
 	if err != nil {
 		return nil, err

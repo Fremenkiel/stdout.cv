@@ -11,12 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
-	"github.com/fremenkiel/stdout.cv/internal/ui"
 	"github.com/fremenkiel/stdout.cv/internal/row"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/table"
+	"github.com/fremenkiel/stdout.cv/internal/ui"
 	"github.com/fremenkiel/stdout.cv/pkg/dotenv"
 )
 
@@ -32,7 +33,7 @@ func main() {
 		}
 	}
 
-	sessionCache := session.NewCache()
+	sessionCache := session.NewCache(database.DatabaseFilePath)
 
 	rowRepo := row.NewRepository(sessionCache)
 	schemaRepo := schema.NewRepository(sessionCache)

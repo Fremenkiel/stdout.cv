@@ -1,18 +1,17 @@
 package session
 
 import (
-	"context"
 	"errors"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/fremenkiel/stdout.cv/internal/platform"
 )
 
 type Middleware struct {
 	service *Service
 }
+
+const cookieKey key = "session_id"
 
 func NewMiddleware(s *Service) *Middleware {
 	return &Middleware{service: s}
@@ -20,7 +19,7 @@ func NewMiddleware(s *Service) *Middleware {
 
 func (m *Middleware) Handle(w http.ResponseWriter, r *http.Request, next func(http.ResponseWriter, *http.Request)) {
 	var sessionId string
-	sessionCookie, err := r.Cookie(platform.SessionKey)
+	sessionCookie, err := r.Cookie(cookieKey)
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
 			sessionId, err = m.service.CreateSession()
@@ -54,13 +53,13 @@ func (m *Middleware) Handle(w http.ResponseWriter, r *http.Request, next func(ht
 
 	setCookie(w, sessionId)
 
-	ctx := context.WithValue(r.Context(), platform.SessionKey, sessionId)
+	ctx := NewContext(r.Context(), sessionId)
 	next(w, r.WithContext(ctx))
 }
 
 func setCookie(w http.ResponseWriter, id string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     platform.SessionKey,
+		Name:     cookieKey,
 		Value:    id,
 		Path:     "/",
 		MaxAge:   int(5*time.Minute),

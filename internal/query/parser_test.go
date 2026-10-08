@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/fremenkiel/stdout.cv/internal/schema"
+	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
@@ -345,7 +345,7 @@ func TestAppendWildcardSchema(t *testing.T) {
 		name							string
 		fields						[]string
 		wildcardIndex			int16
-		schema						[]*schema.Schema
+		schema						[]*column.Column
 		expectedResponse	[]string
 		expectedError			error
 	} {
@@ -355,10 +355,10 @@ func TestAppendWildcardSchema(t *testing.T) {
 				"*",
 			},
 			wildcardIndex: 0,
-			schema: []*schema.Schema{
-				&schema.Schema{ Name: "name" },
-				&schema.Schema{ Name: "age" },
-				&schema.Schema{ Name: "email" },
+			schema: []*column.Column{
+				&column.Column{ Name: "name" },
+				&column.Column{ Name: "age" },
+				&column.Column{ Name: "email" },
 			},
 			expectedResponse: []string{
 				"name",
@@ -375,10 +375,10 @@ func TestAppendWildcardSchema(t *testing.T) {
 				"age",
 			},
 			wildcardIndex: 1,
-			schema: []*schema.Schema{
-				&schema.Schema{ Name: "name" },
-				&schema.Schema{ Name: "age" },
-				&schema.Schema{ Name: "email" },
+			schema: []*column.Column{
+				&column.Column{ Name: "name" },
+				&column.Column{ Name: "age" },
+				&column.Column{ Name: "email" },
 			},
 			expectedResponse: []string{
 				"name",
@@ -395,7 +395,7 @@ func TestAppendWildcardSchema(t *testing.T) {
 				"*",
 			},
 			wildcardIndex: 0,
-			schema: []*schema.Schema{},
+			schema: []*column.Column{},
 			expectedResponse: []string{},
 			expectedError: nil,
 		},
@@ -406,7 +406,7 @@ func TestAppendWildcardSchema(t *testing.T) {
 				"*",
 			},
 			wildcardIndex: 0,
-			schema: []*schema.Schema{},
+			schema: []*column.Column{},
 			expectedResponse: nil,
 			expectedError: ErrFieldNotWildcard,
 		},

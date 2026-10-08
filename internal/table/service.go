@@ -3,10 +3,11 @@ package table
 import (
 	"context"
 
+	"github.com/fremenkiel/stdout.cv/internal/column"
 )
 
 type SchemaService interface {
-	GetSchema(ctx context.Context, name string) ([]*Column, error)
+	GetSchema(ctx context.Context, name string) ([]*column.Column, error)
 }
 
 type Service struct {

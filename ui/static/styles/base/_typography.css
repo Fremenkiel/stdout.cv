@@ -2,6 +2,10 @@ body {
   font-family: "Geist Mono", ui-monospace, monospace;
 }
 
+p, span {
+  font-size: var(--font-size-base);
+}
+
 h1 {
   font-size: var(--font-size-header);
   color: var(--color-text-primary);
@@ -10,4 +14,15 @@ h1 {
 h2 {
   font-size: var(--font-size-subheader);
   color: var(--color-text-primary);
+}
+
+h3 {
+  font-size: var(--font-size-subheader);
+  font-weight: 500;
+}
+
+h4 {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  font-weight: 600;
 }

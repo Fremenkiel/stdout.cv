@@ -6,7 +6,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform"
+	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 	"github.com/google/uuid"
 )
@@ -107,7 +107,7 @@ func TestHandle(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				cache := NewCache()
+				cache := NewCache(database.TestDatabaseFileNameTemplate)
 				service := NewService(cache)
 				middleware := NewMiddleware(service)
 
@@ -119,12 +119,14 @@ func TestHandle(t *testing.T) {
 					}
 
 					test.cookies = append(test.cookies, &http.Cookie{
-						Name:     platform.SessionKey,
+						Name:     cookieKey,
 						Value:    test.sessionId,
 						Path:     "/",
 						MaxAge:   int(5*time.Minute),
 						HttpOnly: true,
 					})
+					ctx := NewContext(t.Context(), test.sessionId)
+					defer testutil.CleanupSession(ctx)
 				}
 
 				if test.expiredSession {
@@ -150,7 +152,10 @@ func TestHandle(t *testing.T) {
 
 				ranNext := false
 				middleware.Handle(writer, request, func(w http.ResponseWriter, r *http.Request) {
-					contextSessionId := r.Context().Value(platform.SessionKey).(string)
+					contextSessionId, err := FromContext(r.Context())
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					if len(contextSessionId) == 0 {
 						t.Fatal("no session id was set")

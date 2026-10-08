@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/query"
-	"github.com/fremenkiel/stdout.cv/internal/table"
 )
 
 
 type SchemaService interface {
-	GetSchema(ctx context.Context, name string) ([]*table.Column, error)
+	GetSchema(ctx context.Context, name string) ([]*column.Column, error)
 }
 
 type Service struct {

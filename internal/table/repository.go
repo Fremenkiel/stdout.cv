@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform"
+	"github.com/fremenkiel/stdout.cv/internal/session"
 	_ "modernc.org/sqlite"
 )
 
@@ -26,7 +26,12 @@ func (r *Repository) GetTables(ctx context.Context) ([]*Table, error) {
 	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%';
 	`
 
-	databaseName, err := r.sessionCache.GetFile(ctx.Value(platform.SessionKey).(string))
+	sessionId, err := session.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	databaseName, err := r.sessionCache.GetFile(sessionId)
 	db, err := sql.Open("sqlite", databaseName)
 	if err != nil {
 		return nil, err

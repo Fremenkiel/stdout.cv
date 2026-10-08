@@ -3,21 +3,17 @@ package schema
 import (
 	"context"
 
-	"github.com/fremenkiel/stdout.cv/internal/row"
-	"github.com/fremenkiel/stdout.cv/internal/table"
+	"github.com/fremenkiel/stdout.cv/internal/column"
 )
 
 type Service struct {
 	repository	*Repository
 }
 
-var _ table.SchemaService = (*Service)(nil)
-var _ row.SchemaService = (*Service)(nil)
-
 func NewService(r *Repository) *Service {
 	return &Service{repository: r}
 }
 
-func (s *Service) GetSchema(ctx context.Context, name string) ([]*table.Column, error) {
+func (s *Service) GetSchema(ctx context.Context, name string) ([]*column.Column, error) {
 	return s.repository.GetSchema(ctx, name)
 }

@@ -1,15 +1,17 @@
 .nav__header {
   display: flex;
   width: auto;
-  margin: var(--size-spacing);
-  gap: calc(2 * var(--size-spacing-x));
+  margin: 32px var(--size-nav-margin-x);
+  gap: calc(2 * var(--size-margin-x));
   align-items: center;
 }
 
 .nav__subtitle {
-  font-size: var(--font-size-base);
+  margin: 6px var(--size-nav-margin-x);
+}
+
+.nav__subtitle h4 {
   color: var(--color-text-secondary);
-  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -17,7 +19,6 @@
   display: flex;
   height: 28px;
   width: 28px;
-  margin-left: var(--size-spacing-x);
   align-items: center;
   justify-content: center;
   background-color: var(--color-primary);
@@ -32,9 +33,10 @@
 }
 
 .nav__list {
-  margin: var(--size-spacing);
+  margin: var(--size-margin-y) calc(var(--size-nav-margin-x) - var(--size-padding-x));
+  margin-top: 0;
 }
 
 .nav__list>li {
-  margin: var(--size-spacing);
+  margin-bottom: var(--size-margin-y);
 }

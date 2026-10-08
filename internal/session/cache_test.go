@@ -26,7 +26,7 @@ func TestAddSession(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				cache := NewCache()
+				cache := NewCache(database.TestDatabaseFileNameTemplate)
 
 				cache.AddSession(test.id)
 
@@ -74,6 +74,7 @@ func TestUpdateSession(t *testing.T) {
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				cache := &Cache{
+					databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
 					files: make(map[string]string, 1),
 				}
 
@@ -160,6 +161,7 @@ func TestLoadAndDelete(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cache := Cache{
+				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
 				files: make(map[string]string, len(test.initialState)),
 			}
 
@@ -212,8 +214,9 @@ func TestAddFile(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
-			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, test.id)
+			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
 			cache := &Cache{
+				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
 				files: make(map[string]string, 1),
 			}
 
@@ -260,8 +263,9 @@ func TestRemoveFile(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
-			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, test.id)
+			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
 			cache := &Cache{
+				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
 				files: make(map[string]string, 1),
 			}
 
@@ -304,8 +308,9 @@ func TestGetFile(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func (t *testing.T) {
-			fileName := fmt.Sprintf(database.DatabaseFileNameTemplate, test.id)
+			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
 			cache := &Cache{
+				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
 				files: make(map[string]string, 1),
 			}
 

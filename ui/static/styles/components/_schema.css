@@ -22,9 +22,13 @@
   background-color: var(--color-active-hover);
 }
 
-.schema__name {
+.schema__header--primary {
   display: flex;
   align-items: center;
+}
+
+.schema__header--secondary {
+  color: var(--color-text-secondary);
 }
 
 .schema__icon {
@@ -32,7 +36,7 @@
   width: 12px;
   stroke: var(--color-text-secondary);
   stroke-width: 1.5px;
-  margin-right: 12px;
+  margin-right: var(--size-margin-x);
 }
 
 .schema[open] .schema__icon {
@@ -43,6 +47,12 @@
 .schema__list li {
   display: flex;
   width: auto;
+  margin-bottom: 10px;
+  padding-left: calc(3 * var(--size-margin-x));
+  padding-right: var(--size-margin-x);
   justify-content: space-between;
 }
 
+.schema__list li:first-child {
+  margin-top: 10px;
+}
