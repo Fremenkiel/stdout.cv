@@ -303,7 +303,9 @@ func TestParse(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			response, err := Parse(test.queryString)
 
@@ -412,7 +414,9 @@ func TestAppendWildcardSchema(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			response, err := AppendWildcardSchema(test.wildcardIndex, test.fields, test.schema)
 
@@ -514,7 +518,9 @@ func TestParseFields(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			response, windcardIndex := parseSelectField(test.fieldSlice, test.fieldStr)
 

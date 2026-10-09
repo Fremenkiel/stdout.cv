@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/fremenkiel/stdout.cv/internal/row"
-	"github.com/fremenkiel/stdout.cv/internal/table"
 	"github.com/fremenkiel/stdout.cv/ui"
 )
 
@@ -17,9 +15,6 @@ type Renderer struct {
 	pageCache	map[string]*template.Template
 	base			*template.Template
 }
-
-var _ table.Renderer = (*Renderer)(nil)
-var _ row.Renderer = (*Renderer)(nil)
 
 func NewRenderer() *Renderer {
 	base := template.Must(template.New("").ParseFS(ui.Files, "html/layouts/*.html", "html/components/*.html"))

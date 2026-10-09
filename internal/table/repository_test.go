@@ -1,16 +1,15 @@
 package table
 
 import (
-"testing"
+	"testing"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/platform/database"
-	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
-func TestServiceGetTables(t *testing.T) {
+func TestRepositoryGetTables(t *testing.T) {
 	tests := []struct{
 		name							string
 		hasSession				bool
@@ -91,27 +90,22 @@ func TestServiceGetTables(t *testing.T) {
 			cache := session.NewCache(database.TestDatabaseFileNameTemplate)
 
 			ctx := t.Context()
-
 			if test.hasSession {
 				sessionService := session.NewService(cache)
-
-				sessionId, err := sessionService.CreateSession()
+				id, err := sessionService.CreateSession()
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				ctx = session.NewContext(t.Context(), sessionId)
+				ctx = session.NewContext(ctx, id)
 				defer testutil.CleanupSession(ctx)
 			}
 
-			service := NewService(
-				NewRepository(cache),
-				schema.NewService(schema.NewRepository(cache)),
-				)
+			repository := NewRepository(cache)
 
-			response, err := service.GetTables(ctx)
+			response, err := repository.GetTables(ctx)
 			if test.expectedError != err {
-				t.Fatalf("unexpected error, %v got %v", test.expectedError, err)
+				t.Fatalf("unexpected err, %v got %v", test.expectedError, err)
 			}
 
 			if test.expectedError != nil && err != nil {
@@ -122,19 +116,21 @@ func TestServiceGetTables(t *testing.T) {
 				t.Fatalf("unexpected response len, %d got %d", len(test.expectedResponse), len(response))
 			}
 
+
 			for i := range response {
 				table := response[i]
 				expectedResponse := test.expectedResponse[i]
+
 				if expectedResponse.Name != table.Name {
-					t.Fatalf("unexpected table name, %s got %s", expectedResponse.Name, table.Name)
+					t.Fatalf("unexpected name, %s got %s", expectedResponse.Name, table.Name)
 				}
 
 				if expectedResponse.RowCount != table.RowCount {
-					t.Fatalf("unexpected row count, %d got %d", expectedResponse.RowCount, table.RowCount)
+					t.Fatalf("unexpected name, %s got %s", expectedResponse.Name, table.Name)
 				}
 
 				for ci := range table.Columns {
-					col := table.Columns[ci]
+					col := table.Columns[i]
 					expectedColumn := expectedResponse.Columns[ci]
 
 					if expectedColumn.Name != col.Name {
@@ -162,6 +158,7 @@ func TestServiceGetTables(t *testing.T) {
 					}
 				}
 			}
+
 		})
 	}
 }

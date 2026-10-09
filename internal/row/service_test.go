@@ -12,7 +12,7 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
-func TestGetRows(t *testing.T) {
+func TestServiceGetRows(t *testing.T) {
 	tests := []struct{
 		name,
 		tableName					string
@@ -27,8 +27,8 @@ func TestGetRows(t *testing.T) {
 			expectedResponse: &Result{
 				Rows: []*Row{
 					{
-						stringPtr("id"),
-						stringPtr("Kevin"),
+						stringPtr("1"),
+						stringPtr("Kevin Wagner"),
 					},
 				},	
 				Columns: []string{
@@ -42,7 +42,14 @@ func TestGetRows(t *testing.T) {
 			name: "no_rows",
 			tableName: "educations",
 			hasSession: true,
-			expectedResponse: nil,
+			expectedResponse: &Result{
+				Rows: []*Row{},
+				Columns: []string{
+					"id",
+					"user_id",
+					"description",
+				},
+			},
 			expectedError: nil,
 		},
 		{
@@ -54,7 +61,9 @@ func TestGetRows(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			cache := session.NewCache(database.TestDatabaseFileNameTemplate)
 
@@ -82,7 +91,7 @@ func TestGetRows(t *testing.T) {
 				t.Fatalf("unexpected error, %v got %v", test.expectedError, err)
 			}
 
-			if test.expectedResponse == nil && response == nil {
+			if test.expectedError != nil && err != nil {
 				return
 			}
 
@@ -95,8 +104,20 @@ func TestGetRows(t *testing.T) {
 			}
 
 			for i := range response.Rows {
-				if test.expectedResponse.Rows[i] != response.Rows[i] {
-					t.Fatalf("unexpected row, %v got %v", test.expectedResponse.Rows[i], response.Rows[i])
+				row := response.Rows[i]
+				expectedRow := test.expectedResponse.Rows[i]
+				
+				if len(*expectedRow) != len(*row) {
+					t.Fatalf("unexpected row len, %d got %d", len(*expectedRow), len(*row))
+				}
+
+				for ri := range *row {
+					field := (*row)[ri]
+					expectedField := (*expectedRow)[ri]
+
+					if *expectedField != *field {
+						t.Fatalf("unexpected field, %s got %s", *expectedField, *field)
+					}
 				}
 			}
 		})
@@ -126,7 +147,9 @@ func TestParseQuery(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			service := NewService(nil, NewTestSchemaService(test.tableName, test.tableSchema))
 

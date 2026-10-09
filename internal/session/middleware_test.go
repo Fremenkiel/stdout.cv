@@ -104,7 +104,9 @@ func TestHandle(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				cache := NewCache(database.TestDatabaseFileNameTemplate)

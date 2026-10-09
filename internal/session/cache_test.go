@@ -23,7 +23,9 @@ func TestAddSession(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				cache := NewCache(database.TestDatabaseFileNameTemplate)
@@ -70,7 +72,9 @@ func TestUpdateSession(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				cache := &Cache{
@@ -158,7 +162,9 @@ func TestLoadAndDelete(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func(t *testing.T) {
 			cache := Cache{
 				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
@@ -212,7 +218,9 @@ func TestAddFile(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func (t *testing.T) {
 			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
 			cache := &Cache{
@@ -261,7 +269,9 @@ func TestRemoveFile(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func (t *testing.T) {
 			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
 			cache := &Cache{
@@ -306,7 +316,9 @@ func TestGetFile(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for ti := range tests {
+		test := tests[ti]
+
 		t.Run(test.name, func (t *testing.T) {
 			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
 			cache := &Cache{

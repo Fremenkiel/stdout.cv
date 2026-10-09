@@ -14,8 +14,10 @@ type ResponseWriter struct {
 	buffer				bytes.Buffer
 }
 
-func NewResponseWriter() ResponseWriter {
-	return ResponseWriter{
+var _ http.ResponseWriter = (*ResponseWriter)(nil)
+
+func NewResponseWriter() *ResponseWriter {
+	return &ResponseWriter{
 		header: make(map[string][]string),
 		status: -1,
 		wroteHeader: false,
@@ -24,16 +26,16 @@ func NewResponseWriter() ResponseWriter {
 	}
 }
 
-func (w ResponseWriter) Header() http.Header {
+func (w *ResponseWriter) Header() http.Header {
 	return w.header
 }
 
-func (w ResponseWriter) WriteHeader(statusCode int) {
+func (w *ResponseWriter) WriteHeader(statusCode int) {
 	w.status = statusCode
 	w.wroteHeader = true
 }
 
-func (w ResponseWriter) Write(p []byte) (n int, err error) {
+func (w *ResponseWriter) Write(p []byte) (n int, err error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -42,4 +44,8 @@ func (w ResponseWriter) Write(p []byte) (n int, err error) {
 	w.sentResponse = true
 
 	return w.buffer.Write(p)
+}
+
+func (w *ResponseWriter) Status() int {
+	return w.status
 }

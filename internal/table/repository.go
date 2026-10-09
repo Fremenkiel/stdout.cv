@@ -23,7 +23,7 @@ func NewRepository(sc SessionCache) *Repository {
 
 func (r *Repository) GetTables(ctx context.Context) ([]*Table, error) {
 	query := `
-	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%';
+	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;
 	`
 
 	sessionId, err := session.FromContext(ctx)

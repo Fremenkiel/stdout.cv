@@ -30,6 +30,10 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	queryString := r.URL.Query().Get("query")
+	if len(queryString) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	result, err := h.service.GetRows(ctx, queryString)
 	if err != nil {
