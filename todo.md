@@ -1,1 +1,2 @@
 - Support multiple line query
+- Cleanup go routine
