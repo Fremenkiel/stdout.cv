@@ -34,6 +34,8 @@ func main() {
 	}
 
 	sessionCache := session.NewCache(database.DatabaseFilePath)
+	go func() {
+	}()
 
 	rowRepo := row.NewRepository(sessionCache)
 	schemaRepo := schema.NewRepository(sessionCache)

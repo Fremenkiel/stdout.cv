@@ -8,17 +8,20 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/query"
 )
 
+type repository interface {
+	GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error)
+}
 
 type SchemaService interface {
 	GetSchema(ctx context.Context, name string) ([]*column.Column, error)
 }
 
 type Service struct {
-	repository		*Repository
+	repository		repository
 	schemaService	SchemaService
 }
 
-func NewService(r *Repository, ss SchemaService) *Service {
+func NewService(r repository, ss SchemaService) *Service {
 	return &Service{
 		repository: r,
 		schemaService: ss,

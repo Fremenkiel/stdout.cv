@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/platform/database"
+	"github.com/fremenkiel/stdout.cv/internal/query"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
@@ -207,4 +210,54 @@ func (s *testSchemaService) GetSchema(ctx context.Context, name string) ([]*colu
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+func TestServiceGetRowDuration(t *testing.T) {
+	tests := []struct{
+		name,
+		query							string
+		expectedResponse	time.Duration
+		expectedError			error
+	} {
+		{
+			name: "get_rows",
+			expectedResponse: time.Duration(10 * time.Microsecond),
+			expectedError: nil,
+		},
+	}
+
+	for ti := range tests {
+		test := tests[ti]
+
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+			ctx := t.Context()
+			service := NewService(
+				&testRepository{},
+				nil,
+				)
+
+			response, err := service.GetRows(ctx, test.query)
+			if test.expectedError != err {
+				t.Fatalf("unexpected error, %v got %v", test.expectedError, err)
+			}
+
+			if test.expectedError != nil && err != nil {
+				return
+			}
+
+			if test.expectedResponse.Microseconds() != response.Duration {
+				t.Fatalf("unexpected duration, %d got %d", test.expectedResponse.Microseconds(), response.Duration)
+			}
+			})
+		})
+	}
+}
+
+type testRepository struct {}
+
+func (r *testRepository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
+	time.Sleep(10 * time.Microsecond)
+
+	return nil, nil
 }
