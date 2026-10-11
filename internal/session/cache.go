@@ -7,15 +7,16 @@ import (
 )
 
 type Cache struct {
-	databaseFileNameTemplate	string
 	sessions									sync.Map
-	files											map[string]string
+	files											sync.Map
+	databasePath,
+	databaseFileTemplate			string
 }
 
-func NewCache(dbNameTemplate string) *Cache {
+func NewCache(databasePath, databaseFileTemplate string) *Cache {
 	return &Cache{
-		databaseFileNameTemplate: dbNameTemplate,
-		files: make(map[string]string),
+		databasePath: databasePath,
+		databaseFileTemplate: databaseFileTemplate,
 	}
 }
 
@@ -60,24 +61,37 @@ func (c *Cache) LoadAndDeleteOldSessions() []string {
 	return oldSessions
 }
 
+func (c *Cache) LoadAndDeleteOrphantFiles() []string {
+	var orphantFiles []string
+	c.files.Range(func(key any, value any) bool {
+		id := key.(string)
+		if _, ok := c.LoadSession(id); !ok {
+			orphantFiles = append(orphantFiles, id)
+		}
+		return true
+	})
+
+	return orphantFiles
+}
+
 // Adds session database file path to cache
 func (c *Cache) AddFile(id string) string {
-	filePath := fmt.Sprintf(c.databaseFileNameTemplate, id)
+	filePath := fmt.Sprintf(c.databaseFileTemplate, id)
 
-	c.files[id] = filePath
+	c.files.Store(id, filePath)
 
 	return filePath
 }
 
 func (c *Cache) RemoveFile(id string) {
-	delete(c.files, id)
+	c.files.Delete(id)
 }
 
 func (c *Cache) GetFile(id string) (string, error) {
-	str, ok := c.files[id]
+	str, ok := c.files.Load(id)
 	if !ok {
 		return "", ErrFileNotFound
 	}
 
-	return str, nil
+	return str.(string), nil
 }

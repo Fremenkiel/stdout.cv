@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  entrypoint = "./tmp/main"
+  entrypoint = "APP_ENV=development ./tmp/main"
   cmd = "go build -o ./tmp/main ./cmd/main.go"
   delay = 0
   exclude_dir = ["node_modules", "assets", "tmp", "vendor", "testdata"]
@@ -24,6 +24,7 @@ tmp_dir = "tmp"
   rerun_delay = 500
   send_interrupt = false
   stop_on_error = false
+  env_files = [".env.development", ".env"]
 
 [color]
   app = ""
@@ -42,3 +43,8 @@ tmp_dir = "tmp"
 [screen]
   clear_on_rebuild = false
   keep_scroll = true
+
+[proxy]
+  enabled = true
+  proxy_port = 8090
+  app_port = 8080

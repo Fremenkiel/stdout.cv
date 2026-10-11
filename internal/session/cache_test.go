@@ -8,7 +8,6 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
@@ -28,7 +27,8 @@ func TestAddSession(t *testing.T) {
 
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				cache := NewCache(database.TestDatabaseFileNameTemplate)
+				env := testutil.LoadTestEnv(t)
+				cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
 
 				cache.AddSession(test.id)
 
@@ -77,9 +77,10 @@ func TestUpdateSession(t *testing.T) {
 
 		t.Run(test.name, func (t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
+				env := testutil.LoadTestEnv(t)
 				cache := &Cache{
-					databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
-					files: make(map[string]string, 1),
+					databasePath: env.DatabasePath,
+					databaseFileTemplate: env.DatabaseFileTemplate,
 				}
 
 				if test.loaded {
@@ -166,9 +167,10 @@ func TestLoadAndDelete(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
+			env := testutil.LoadTestEnv(t)
 			cache := Cache{
-				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
-				files: make(map[string]string, len(test.initialState)),
+				databasePath: env.DatabasePath,
+				databaseFileTemplate: env.DatabaseFileTemplate,
 			}
 
 			for key, value := range test.initialState {
@@ -222,25 +224,26 @@ func TestAddFile(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func (t *testing.T) {
-			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
+			env := testutil.LoadTestEnv(t)
+			fileName := fmt.Sprintf(env.DatabaseFileTemplate, test.id)
 			cache := &Cache{
-				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
-				files: make(map[string]string, 1),
+				databasePath: env.DatabasePath,
+				databaseFileTemplate: env.DatabaseFileTemplate,
 			}
 
 			if test.loaded {
-				cache.files[test.id] = fileName
+				cache.files.Store(test.id, fileName)
 			}
 
 			response := cache.AddFile(test.id)
 
-			path, ok := cache.files[test.id]
+			path, ok := cache.files.Load(test.id)
 
 			if !ok {
 				t.Fatal("file was not loaded to cache")
 			}
 
-			if !strings.Contains(path, fileName) {
+			if !strings.Contains(path.(string), fileName) {
 				t.Fatalf("unexpected file path, %s got %s", fileName, path)
 			}
 
@@ -273,19 +276,20 @@ func TestRemoveFile(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func (t *testing.T) {
-			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
+			env := testutil.LoadTestEnv(t)
+			fileName := fmt.Sprintf(env.DatabaseFileTemplate, test.id)
 			cache := &Cache{
-				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
-				files: make(map[string]string, 1),
+				databasePath: env.DatabasePath,
+				databaseFileTemplate: env.DatabaseFileTemplate,
 			}
 
 			if test.loaded {
-				cache.files[test.id] = fileName
+				cache.files.Store(test.id, fileName)
 			}
 
 			cache.RemoveFile(test.id)
 
-			if _, ok := cache.files[test.id]; ok {
+			if _, ok := cache.files.Load(test.id); ok {
 				t.Fatal("file was not removed from cache")
 			}
 		})
@@ -320,14 +324,15 @@ func TestGetFile(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func (t *testing.T) {
-			fileName := fmt.Sprintf(database.TestDatabaseFileNameTemplate, test.id)
+			env := testutil.LoadTestEnv(t)
+			fileName := fmt.Sprintf(env.DatabaseFileTemplate, test.id)
 			cache := &Cache{
-				databaseFileNameTemplate: database.TestDatabaseFileNameTemplate,
-				files: make(map[string]string, 1),
+				databasePath: env.DatabasePath,
+				databaseFileTemplate: env.DatabaseFileTemplate,
 			}
 
 			if test.loaded {
-				cache.files[test.id] = fileName
+				cache.files.Store(test.id, fileName)
 			}
 
 			path, err := cache.GetFile(test.id)

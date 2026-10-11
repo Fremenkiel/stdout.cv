@@ -1,7 +1,7 @@
-CREATE TABLE users (
-    id    INTEGER PRIMARY KEY, 
-    name  TEXT
-)
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
 
 CREATE TABLE educations ( 
     id           INTEGER PRIMARY KEY, 

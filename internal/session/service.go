@@ -1,13 +1,15 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/fremenkiel/stdout.cv/db"
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/google/uuid"
 )
 
@@ -49,6 +51,22 @@ func (s *Service) UpdateSession(id string) error {
 	return nil
 }
 
+func (s *Service) StartCleanupWorker(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		select {
+		case <-ticker.C:
+			if err := s.RemoveExpiredSessions(); err != nil {
+				log.Printf("error thrown while removing expired sessions, %v", err)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}()
+}
+
 // Removes all expired session, alongside any orphant cached file paths and database files not saved in the cache.
 func (s *Service) RemoveExpiredSessions() error {
 	expiredSessions := s.cache.LoadAndDeleteOldSessions()
@@ -60,15 +78,15 @@ func (s *Service) RemoveExpiredSessions() error {
 		}
 	}
 
-	for id := range s.cache.files {
-		if _, ok := s.cache.LoadSession(id); !ok {
-			if err := s.removeSessionDatabase(id); err != nil {
-				returnErr = errors.Join(returnErr, err)
-			}
+	orphantFiles := s.cache.LoadAndDeleteOrphantFiles()
+
+	for _, id := range orphantFiles {
+		if err := s.removeSessionDatabase(id); err != nil {
+			returnErr = errors.Join(returnErr, err)
 		}
 	}
 
-	dir, err := os.ReadDir(database.DatabaseFilePath)
+	dir, err := os.ReadDir(s.cache.databasePath)
 	if err != nil {
 		return err
 	}
@@ -114,7 +132,7 @@ func (s *Service) createSessionDatabase(id string) error {
 }
 
 func (s *Service) removeSessionDatabase(id string) error {
-	if err := os.Remove(fmt.Sprintf(s.cache.databaseFileNameTemplate, id)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(fmt.Sprintf(s.cache.databaseFileTemplate, id)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	s.cache.RemoveFile(id)

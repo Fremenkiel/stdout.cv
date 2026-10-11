@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
 	"github.com/fremenkiel/stdout.cv/internal/row"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
@@ -33,9 +32,10 @@ func main() {
 		}
 	}
 
-	sessionCache := session.NewCache(database.DatabaseFilePath)
-	go func() {
-	}()
+	sessionCache := session.NewCache(
+		os.Getenv("DATABASE_PATH"),
+		os.Getenv("DATABASE_FILE_TEMPLATE"),
+		)
 
 	rowRepo := row.NewRepository(sessionCache)
 	schemaRepo := schema.NewRepository(sessionCache)
@@ -71,15 +71,19 @@ func main() {
 		Handler: mux,
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	sessionService.StartCleanupWorker(ctx, time.Duration(5 * time.Minute))
+
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP server error: %v", err)
 		}
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+	<-ctx.Done()
+	log.Print("Shutdown signel recived")
 
 	shotdownCtx, shotdownRelease := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shotdownRelease()

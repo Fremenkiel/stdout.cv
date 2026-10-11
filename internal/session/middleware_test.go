@@ -6,7 +6,6 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 	"github.com/google/uuid"
 )
@@ -109,7 +108,8 @@ func TestHandle(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				cache := NewCache(database.TestDatabaseFileNameTemplate)
+				env := testutil.LoadTestEnv(t)
+				cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
 				service := NewService(cache)
 				middleware := NewMiddleware(service)
 
@@ -128,7 +128,7 @@ func TestHandle(t *testing.T) {
 						HttpOnly: true,
 					})
 					ctx := NewContext(t.Context(), test.sessionId)
-					defer testutil.CleanupSession(ctx)
+					defer testutil.CleanupSession(ctx, env.DatabasePath)
 				}
 
 				if test.expiredSession {

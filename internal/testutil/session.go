@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 )
 
-func CleanupSession(ctx context.Context) {
+func CleanupSession(ctx context.Context, filePath string) {
 	sessionId := ctx.Value("session_key").(string)
 
-	if err := os.Remove(fmt.Sprintf(database.TestDatabaseFileNameTemplate, sessionId)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(fmt.Sprintf(filePath, sessionId)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		panic(err)
 	}
 }

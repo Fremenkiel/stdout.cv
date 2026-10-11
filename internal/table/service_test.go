@@ -4,7 +4,6 @@ import (
 "testing"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
-	"github.com/fremenkiel/stdout.cv/internal/platform/database"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
@@ -88,7 +87,8 @@ func TestServiceGetTables(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			cache := session.NewCache(database.TestDatabaseFileNameTemplate)
+			env := testutil.LoadTestEnv(t)
+			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
 
 			ctx := t.Context()
 
@@ -101,7 +101,7 @@ func TestServiceGetTables(t *testing.T) {
 				}
 
 				ctx = session.NewContext(t.Context(), sessionId)
-				defer testutil.CleanupSession(ctx)
+				defer testutil.CleanupSession(ctx, env.DatabasePath)
 			}
 
 			service := NewService(

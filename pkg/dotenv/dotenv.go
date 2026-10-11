@@ -7,27 +7,13 @@ import (
 	"strings"
 )
 
-func Parse(r io.Reader) (map[string]string, error) {
-	var buf bytes.Buffer
-	_, err := io.Copy(&buf, r)
-	if err != nil {
-		return nil, err
-	}
-
-	return UnmarshalBytes(buf.Bytes())
-}
-
 func Load() error {
 	var filenames []string
 	switch os.Getenv("APP_ENV") {
-	case "production":
-		return nil
-	case "test":
-		filenames = []string{".env", ".env.test"}
 	case "development":
 		filenames = []string{".env", ".env.development"}
 	default:
-		filenames = []string{".env"}
+		return nil
 	}
 
 	for _, filename := range filenames {
@@ -39,11 +25,7 @@ func Load() error {
 	return nil
 }
 
-func Unmarshal(str string) (envMap map[string]string, err error) {
-	return UnmarshalBytes([]byte(str))
-}
-
-func UnmarshalBytes(src []byte) (map[string]string, error) {
+func unmarshalBytes(src []byte) (map[string]string, error) {
 	out := make(map[string]string)
 	err := parseBytes(src, out)
 
@@ -65,7 +47,7 @@ func loadFile(filename string, overload bool) error {
 
 	for key, value := range envMap {
 		if !currentEnv[key] || overload {
-			_ = os.Setenv(key, value)
+			os.Setenv(key, value)
 		}
 	}
 
@@ -77,7 +59,18 @@ func readFile(filename string) (envMap map[string]string, err error) {
 	if err != nil {
 		return
 	}
-	defer func() { _ = file.Close() }()
+	defer file.Close()
 
-	return Parse(file)
+	return parse(file)
 }
+
+func parse(r io.Reader) (map[string]string, error) {
+	var buf bytes.Buffer
+	_, err := io.Copy(&buf, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return unmarshalBytes(buf.Bytes())
+}
+

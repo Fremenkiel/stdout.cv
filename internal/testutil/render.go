@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 )
 
@@ -23,7 +22,6 @@ func (r *Renderer) RenderPage(w http.ResponseWriter, name string, data any) erro
 	buf.WriteString(name)
 
 	_, err := r.Writer.Write(buf.Bytes())
-		log.Printf("wrote header %d", r.Writer.status)
 	return err
 }
 
