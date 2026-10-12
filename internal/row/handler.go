@@ -1,6 +1,7 @@
 package row
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -17,12 +18,16 @@ type Renderer interface {
 	RenderFragment(w http.ResponseWriter, name string, data any) error
 }
 
-type Handler struct {
-	renderer	Renderer
-	service		*Service
+type RowService interface {
+	GetRows(ctx context.Context, queryString string) (*Result, error)
 }
 
-func NewHandler(r Renderer, s *Service) *Handler {
+type Handler struct {
+	renderer	Renderer
+	service		RowService
+}
+
+func NewHandler(r Renderer, s RowService) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 
@@ -62,7 +67,7 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.Contains(r.Header.Get("Accept"), "application/json") {
+	if !strings.Contains(r.Header.Get("Accept"), "application/") {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
 		return

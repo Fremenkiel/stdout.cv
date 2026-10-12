@@ -1,39 +1,45 @@
 package table
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"github.com/fremenkiel/stdout.cv/internal/schema"
+	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
-	"github.com/fremenkiel/stdout.cv/internal/ui"
 )
 
 func TestHandlerIndex(t *testing.T) {
 	tests := []struct{
 		name,
 		method,
-		url								string
-		cookies						[]*http.Cookie
-		hasSession				bool
-		expectedResponse	int
+		url											string
+		hasSession							bool
+		expectedResponseContent	[]string
+		expectedResponseCode		int
 	} {
 		{
 			name: "index",
 			method: http.MethodGet,
 			url: "/",
-			cookies: []*http.Cookie{},
 			hasSession: true,
-			expectedResponse: http.StatusOK,
+			expectedResponseContent: []string {
+				"page:index",
+				"test_table",
+				"876",
+			},
+			expectedResponseCode: http.StatusOK,
 		},
 		{
 			name: "no_session",
 			method: http.MethodGet,
 			url: "/",
-			cookies: []*http.Cookie{},
 			hasSession: false,
-			expectedResponse: http.StatusInternalServerError,
+			expectedResponseContent: nil,
+			expectedResponseCode: http.StatusInternalServerError,
 		},
 	}
 
@@ -41,41 +47,54 @@ func TestHandlerIndex(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
-
 			ctx := t.Context()
-
 			if test.hasSession {
-				sessionService := session.NewService(cache)
-
-				sessionId, err := sessionService.CreateSession()
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				ctx = session.NewContext(t.Context(), sessionId)
-				defer testutil.CleanupSession(ctx, env.DatabasePath)
+				ctx = context.WithValue(ctx, "session_key", "test")
 			}
 
 			handler := NewHandler(
-				ui.NewRenderer(),
-				NewService(
-					NewRepository(cache),
-					schema.NewService(schema.NewRepository(cache)),
-					),
+				testutil.NewRenderer(),
+				&mockService{},
 				)
 
-			writer := testutil.NewResponseWriter()
+			rr := httptest.NewRecorder()
 
 			handler.Index(
-				writer,
-				testutil.NewRequest(ctx, test.method, test.url, test.cookies),
+				rr,
+				httptest.NewRequestWithContext(ctx, test.method, test.url, nil),
 				)
 
-			if test.expectedResponse != writer.Status() {
-				t.Fatalf("unexpected status code, %d got %d", test.expectedResponse, writer.Status())
+			if test.expectedResponseCode != rr.Code {
+				t.Fatalf("unexpected status code, %d got %d", test.expectedResponseCode, rr.Code)
+			}
+
+			for _, content := range test.expectedResponseContent {
+				if !strings.Contains(rr.Body.String(), content) {
+					t.Fatalf("unexpected response body, %s got %s", content, rr.Body.String())
+				}
 			}
 		})
 	}
+}
+
+type mockService struct {}
+
+func (m *mockService) GetTables(ctx context.Context) ([]*Table, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	return []*Table{
+		{
+			Name: "test_table",
+			RowCount: 876,
+			Columns: []*column.Column{
+				{
+					Name: "test_col",
+					Type: "INTEGER",
+				},
+			},
+		},
+	}, nil
 }

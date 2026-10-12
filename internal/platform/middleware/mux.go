@@ -14,10 +14,6 @@ func (mux *MiddlewareMux) AppendMiddleware(middleware Middleware) {
 	mux.middlewares.PushBack(middleware)
 }
 
-func (mux *MiddlewareMux) PrependMiddleware(middleware Middleware) {
-	mux.middlewares.PushFront(middleware)
-}
-
 func (mux *MiddlewareMux) nextMiddleware(el *list.Element) func(w http.ResponseWriter, req *http.Request) {
 	if el != nil {
 		return func(w http.ResponseWriter, req *http.Request) {

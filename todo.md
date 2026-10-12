@@ -1,2 +1,3 @@
 - Support multiple line query
-- Cleanup go routine
+- Simplify tests
+- Better middleware handling

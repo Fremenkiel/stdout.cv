@@ -51,15 +51,19 @@ func main() {
 	rowHandler := row.NewHandler(renderer, rowService)
 	tableHandler := table.NewHandler(renderer, tableService)
 
-	mux := new(middleware.MiddlewareMux)
+	mux := http.NewServeMux()
 
-	sessionMiddleware := session.NewMiddleware(sessionService)
-	mux.AppendMiddleware(sessionMiddleware.Handle)
+	sessionMiddleware := session.NewMiddleware(sessionService).Handler()
 
 	mux.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./ui/static/scripts"))))
 	mux.Handle("/styles/", http.StripPrefix("/styles/", http.FileServer(http.Dir("./ui/static/styles"))))
 
-	table.NewRouter(mux, tableHandler)
+	requireHtml := middleware.EnforceAccept("text/html")
+	table.NewRouter(
+		mux,
+		sessionMiddleware(requireHtml),
+		tableHandler,
+		)
 	row.NewRouter(mux, rowHandler)
 
 	port := os.Getenv("PORT")

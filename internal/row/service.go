@@ -21,6 +21,8 @@ type Service struct {
 	schemaService	SchemaService
 }
 
+var _ RowService = (*Service)(nil)
+
 func NewService(r repository, ss SchemaService) *Service {
 	return &Service{
 		repository: r,

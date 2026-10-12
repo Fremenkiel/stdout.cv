@@ -4,20 +4,18 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"net/http/httptest"
 )
 
 func NewRequest(ctx context.Context, method, url string, cookies []*http.Cookie) *http.Request {
 	buf := &bytes.Buffer{}
 
-	request, err := http.NewRequestWithContext(
+	request := httptest.NewRequestWithContext(
 		ctx,
 		method,
 		url,
 		buf,
 		)
-	if err != nil {
-		panic("unable to create request")
-	}
 
 	var cookieSlice []string
 	for i := range cookies {

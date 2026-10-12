@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
@@ -80,6 +81,60 @@ func TestServiceUpdateSession(t *testing.T) {
 			if _, ok := cache.files.Load(id); !ok {
 				t.Fatal("session database file path not saved in cache")
 			}
+		})
+	}
+}
+
+func TestStartCleanupWorker(t *testing.T) {
+	tests := []struct{
+		name					string
+		initialState	string
+		expectedError	error
+	} {
+		{
+			name: "remove_session",
+			initialState: "1a100bf-c3be-7d9c-acb8-785e8722f892",
+			expectedError: nil,
+		},
+	}
+
+	for ti := range tests {
+		test := tests[ti]
+
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				env := testutil.LoadTestEnv(t)
+				cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+				service := NewService(cache)
+
+				lastSeen := time.Now().Add(-(5*time.Minute))
+				cache.sessions.Store(test.initialState, lastSeen)
+
+				fileName := fmt.Sprintf(env.DatabaseFileTemplate, test.initialState)
+				cache.sessions.Store(test.initialState, time.Now().Add(-(6*time.Minute)))
+				cache.files.Store(test.initialState, fileName)
+
+				if err := createTestFile(fileName); err != nil {
+					t.Fatal(err)
+				}
+
+				ctx := t.Context()
+				service.StartCleanupWorker(ctx, 5 * time.Second)
+
+				synctest.Sleep(5 * time.Second)
+
+				if _, err := os.Stat(fileName); err == nil {
+					t.Fatal("file was not removed")
+				}
+
+				if _, ok := cache.sessions.Load(test.initialState); ok {
+					t.Fatalf("session not removed from cache, id %s", test.initialState)
+				}
+
+				if _, ok := cache.files.Load(test.initialState); ok {
+					t.Fatalf("session file path not removed from cache, id %s", test.initialState)
+				}
+			})
 		})
 	}
 }

@@ -1,10 +1,14 @@
 package row
 
 import (
-	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
+	"net/http"
 )
 
-func NewRouter(mux *middleware.MiddlewareMux, handler *Handler) {
+type muxHandler interface {
+	HandleFunc(string, func(w http.ResponseWriter, r *http.Request))
+}
+
+func NewRouter(mux muxHandler, handler *Handler) {
 	mux.HandleFunc("GET /rows", handler.GetRows)
 }
 

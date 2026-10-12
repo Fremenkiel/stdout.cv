@@ -1,10 +1,9 @@
 package table
 
 import (
-	"encoding/json"
+	"context"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
@@ -15,12 +14,16 @@ type Renderer interface {
 	RenderFragment(w http.ResponseWriter, name string, data any) error
 }
 
-type Handler struct {
-	renderer	Renderer
-	service		*Service
+type TableService interface {
+	GetTables(ctx context.Context) ([]*Table, error)
 }
 
-func NewHandler(r Renderer, s *Service) *Handler {
+type Handler struct {
+	renderer	Renderer
+	service		TableService
+}
+
+func NewHandler(r Renderer, s TableService) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 
@@ -30,12 +33,6 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error thrown: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if strings.Contains(r.Header.Get("Accept"), "application/json") {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(tables)
 		return
 	}
 

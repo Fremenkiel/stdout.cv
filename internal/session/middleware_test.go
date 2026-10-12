@@ -2,6 +2,7 @@ package session
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -144,7 +145,7 @@ func TestHandle(t *testing.T) {
 					cache.sessions.Swap(test.sessionId, time.Now().Add(-(10*time.Minute)))
 				}
 
-				writer := testutil.NewResponseWriter()
+				rr := httptest.NewRecorder()
 				request := testutil.NewRequest(
 					ctx,
 					test.method,
@@ -153,7 +154,7 @@ func TestHandle(t *testing.T) {
 					)
 
 				ranNext := false
-				middleware.Handle(writer, request, func(w http.ResponseWriter, r *http.Request) {
+				middleware.Handle(rr, request, func(w http.ResponseWriter, r *http.Request) {
 					contextSessionId, err := FromContext(r.Context())
 					if err != nil {
 						t.Fatal(err)

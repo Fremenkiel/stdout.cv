@@ -6,14 +6,20 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/column"
 )
 
+type TableRepository interface {
+	GetTables(ctx context.Context) ([]*Table, error)
+}
+
 type SchemaService interface {
 	GetSchema(ctx context.Context, name string) ([]*column.Column, error)
 }
 
 type Service struct {
-	repository		*Repository
+	repository		TableRepository
 	schemaService	SchemaService
 }
+
+var _ TableService = (*Service)(nil)
 
 func NewService(r *Repository, ss SchemaService) *Service {
 	return &Service{repository: r, schemaService: ss}
