@@ -337,6 +337,22 @@ func TestParse(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "multiple_lines_with_tab",
+			queryString: "select\n\t*\n\tfrom\n\tusers;\n-- do not process this part",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: "SELECT",
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
 	}
 
 	for ti := range tests {

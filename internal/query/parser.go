@@ -65,10 +65,21 @@ func AppendWildcardSchema(wildcardIndex int16, fields []string, schema []*column
 }
 
 func (q *Query) parseLine(line string) error {
-	queryParts := strings.Split(line, " ")
+	querySeq := strings.SplitSeq(line, " ")
 
-	Outerloop:
-	for _, part := range queryParts {
+	for seq := range querySeq {
+		if err := q.parseSeq(seq); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (q *Query) parseSeq(seq string) error {
+	queryPart := strings.SplitSeq(seq, "\t")
+
+	for part := range queryPart {
 		if strings.Contains(part, "--") {
 			return nil
 		}
@@ -86,7 +97,7 @@ func (q *Query) parseLine(line string) error {
 			if strings.EqualFold(part, queryMod) {
 				q.currentContext = queryMod
 				q.Modifiers = append(q.Modifiers, queryMod)
-				continue Outerloop
+				return nil
 			}
 		}
 
@@ -97,7 +108,7 @@ func (q *Query) parseLine(line string) error {
 				}
 				q.Type = queryType
 				q.currentContext = queryType
-				continue Outerloop
+				return nil
 			}
 		}
 
@@ -117,7 +128,6 @@ func (q *Query) parseLine(line string) error {
 
 	return nil
 }
-
 
 // parseSelectField parses a comma seperated select field string and appends them to the fields slice.
 // Returns the populated fields slice, alongside a windcard index whice is -1 if none found.

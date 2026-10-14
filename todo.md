@@ -1,2 +1,1 @@
-- Support multiple line query
 - Simplify tests
