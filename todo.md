@@ -1,3 +1,2 @@
 - Support multiple line query
 - Simplify tests
-- Better middleware handling

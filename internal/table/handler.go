@@ -2,10 +2,11 @@ package table
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
+	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
 
@@ -31,13 +32,21 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tables, err := h.service.GetTables(ctx)
 	if err != nil {
-		log.Printf("Error thrown: %v", err)
+		logger.LogError(
+			"table/handler",
+			"error returned while getting tables",
+			slog.Any("error", err),
+			)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if ctx.Err() != nil {
-		log.Printf("table: context error, %v", ctx.Err())
+	if err := ctx.Err(); err != nil {
+		logger.LogError(
+			"table/handler",
+			"context error",
+			slog.Any("error", err),
+			)
 		w.WriteHeader(http.StatusRequestTimeout)
 		return
 	}
@@ -45,7 +54,11 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	viewData := h.getTableViewData(tables)
 
 	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
-		log.Printf("table: error thrown while rendering, %v", err)
+		logger.LogError(
+			"table/handler",
+			"error returned while rendering",
+			slog.Any("error", err),
+			)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

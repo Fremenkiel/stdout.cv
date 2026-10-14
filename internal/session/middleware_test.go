@@ -19,8 +19,7 @@ func TestHandle(t *testing.T) {
 		sessionId				string
 		cookies					[]*http.Cookie
 		existingSession,
-		expiredSession,
-		expectNext			bool
+		expiredSession	bool
 	} {
 		{
 			name: "initial_request",
@@ -30,7 +29,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: false,
 			expiredSession: false,
-			expectNext: true,
 		},
 		{
 			name: "post_request",
@@ -40,7 +38,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: false,
 			expiredSession: false,
-			expectNext: true,
 		},
 		{
 			name: "put_request",
@@ -50,7 +47,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: false,
 			expiredSession: false,
-			expectNext: true,
 		},
 		{
 			name: "delete_request",
@@ -60,7 +56,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: false,
 			expiredSession: false,
-			expectNext: true,
 		},
 		{
 			name: "random_request",
@@ -70,7 +65,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: false,
 			expiredSession: false,
-			expectNext: true,
 		},
 		{
 			name: "existing_session",
@@ -80,7 +74,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: true,
 			expiredSession: false,
-			expectNext: true,
 		},
 		{
 			name: "existing_session",
@@ -90,7 +83,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: true,
 			expiredSession: true,
-			expectNext: true,
 		},
 		{
 			name: "empty_session_id",
@@ -100,7 +92,6 @@ func TestHandle(t *testing.T) {
 			cookies: []*http.Cookie{},
 			existingSession: true,
 			expiredSession: false,
-			expectNext: true,
 		},
 	}
 
@@ -112,7 +103,37 @@ func TestHandle(t *testing.T) {
 				env := testutil.LoadTestEnv(t)
 				cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
 				service := NewService(cache)
-				middleware := NewMiddleware(service)
+
+				handler := func(w http.ResponseWriter, r *http.Request) {
+					contextSessionId, err := FromContext(r.Context())
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if len(contextSessionId) == 0 {
+						t.Fatal("no session id was set")
+					}
+
+					if test.existingSession && len(test.sessionId) > 0 && !test.existingSession {
+						if test.sessionId != contextSessionId {
+							t.Fatalf("unexpected context session id, %s got %s", test.sessionId, contextSessionId)
+						}
+					}
+
+					requestTime, ok := cache.LoadSession(contextSessionId)
+
+					if !ok {
+						t.Fatal("request not present in cache")
+					}
+
+					if time.Now() != requestTime {
+						t.Fatalf("unexpected request time, %s got %s", time.Now().String(), requestTime.String())
+					}
+
+					w.WriteHeader(http.StatusOK)
+				}
+
+				middleware := Middleware(service)(http.HandlerFunc(handler))
 
 				ctx := t.Context()
 
@@ -153,37 +174,15 @@ func TestHandle(t *testing.T) {
 					test.cookies,
 					)
 
-				ranNext := false
-				middleware.Handle(rr, request, func(w http.ResponseWriter, r *http.Request) {
-					contextSessionId, err := FromContext(r.Context())
-					if err != nil {
-						t.Fatal(err)
-					}
 
-					if len(contextSessionId) == 0 {
-						t.Fatal("no session id was set")
-					}
+				f, ok := middleware.(http.HandlerFunc)
+				if !ok || f == nil {
+					t.Fatal("middleware not of type handler func")
+				}
 
-					if test.existingSession && len(test.sessionId) > 0 && !test.existingSession {
-						if test.sessionId != contextSessionId {
-							t.Fatalf("unexpected context session id, %s got %s", test.sessionId, contextSessionId)
-						}
-					}
-
-					requestTime, ok := cache.LoadSession(contextSessionId)
-
-					if !ok {
-						t.Fatal("request not present in cache")
-					}
-
-					if time.Now() != requestTime {
-						t.Fatalf("unexpected request time, %s got %s", time.Now().String(), requestTime.String())
-					}
-					ranNext = true
-				})
-
-				if test.expectNext != ranNext {
-					t.Fatalf("unexpected next run state, %v got %v", test.expectNext, ranNext)
+				f(rr, request)
+				if rr.Code != http.StatusOK {
+					t.Fatalf("unexpected recorder status code, got %d", rr.Code)
 				}
 			})
 		})

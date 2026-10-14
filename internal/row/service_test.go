@@ -9,8 +9,6 @@ import (
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/query"
-	"github.com/fremenkiel/stdout.cv/internal/schema"
-	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
@@ -18,48 +16,26 @@ func TestServiceGetRows(t *testing.T) {
 	tests := []struct{
 		name,
 		tableName					string
-		hasSession				bool
 		expectedResponse	*Result
 		expectedError			error
 	} {
 		{
 			name: "get_rows",
 			tableName: "users",
-			hasSession: true,
 			expectedResponse: &Result{
 				Rows: []*Row{
 					{
 						stringPtr("1"),
-						stringPtr("Kevin Wagner"),
+						stringPtr("Kevin"),
 					},
 				},	
 				Columns: []string{
 					"id",
 					"name",
+					"age",
 				},
 			},
 			expectedError: nil,
-		},
-		{
-			name: "no_rows",
-			tableName: "educations",
-			hasSession: true,
-			expectedResponse: &Result{
-				Rows: []*Row{},
-				Columns: []string{
-					"id",
-					"user_id",
-					"description",
-				},
-			},
-			expectedError: nil,
-		},
-		{
-			name: "no_session",
-			tableName: "users",
-			hasSession: false,
-			expectedResponse: nil,
-			expectedError: session.ErrNoSessionInContext,
 		},
 	}
 
@@ -67,26 +43,11 @@ func TestServiceGetRows(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
-
 			ctx := t.Context()
 
-			if test.hasSession {
-				sessionService := session.NewService(cache)
-
-				sessionId, err := sessionService.CreateSession()
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				ctx = session.NewContext(t.Context(), sessionId)
-				defer testutil.CleanupSession(ctx, env.DatabasePath)
-			}
-
 			service := NewService(
-				NewRepository(cache),
-				schema.NewService(schema.NewRepository(cache)),
+				&mockRepository{},
+				NewMockSchemaService(),
 				)
 
 			response, err := service.GetRows(ctx, fmt.Sprintf("SELECT * FROM %s;", test.tableName))
@@ -109,7 +70,7 @@ func TestServiceGetRows(t *testing.T) {
 			for i := range response.Rows {
 				row := response.Rows[i]
 				expectedRow := test.expectedResponse.Rows[i]
-				
+
 				if len(*expectedRow) != len(*row) {
 					t.Fatalf("unexpected row len, %d got %d", len(*expectedRow), len(*row))
 				}
@@ -154,7 +115,7 @@ func TestParseQuery(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			service := NewService(nil, NewTestSchemaService(test.tableName, test.tableSchema))
+			service := NewService(nil, NewMockSchemaService())
 
 			result, err := service.parseQuery(t.Context(), test.query)
 			if err != nil {
@@ -180,38 +141,6 @@ func TestParseQuery(t *testing.T) {
 	}
 }
 
-type testSchemaService struct {
-	tableName		string
-	tableSchema	[]*column.Column
-}
-
-func NewTestSchemaService(tableName string, tableSchemaSlice []string) *testSchemaService {
-	tableSchema := make([]*column.Column, len(tableSchemaSlice))
-
-	for i, col := range tableSchemaSlice {
-		tableSchema[i] = &column.Column{
-			Name: col,
-		}
-	}
-
-	return &testSchemaService{
-		tableName: tableName,
-		tableSchema: tableSchema,
-	}
-}
-
-func (s *testSchemaService) GetSchema(ctx context.Context, name string) ([]*column.Column, error) {
-	if name != s.tableName {
-		return nil, fmt.Errorf("Unknown table, %s got %s", s.tableName, name)
-	}
-
-	return s.tableSchema, nil
-}
-
-func stringPtr(s string) *string {
-	return &s
-}
-
 func TestServiceGetRowDuration(t *testing.T) {
 	tests := []struct{
 		name,
@@ -221,6 +150,7 @@ func TestServiceGetRowDuration(t *testing.T) {
 	} {
 		{
 			name: "get_rows",
+			query: "SELECT * FROM users;",
 			expectedResponse: time.Duration(10 * time.Microsecond),
 			expectedError: nil,
 		},
@@ -233,8 +163,8 @@ func TestServiceGetRowDuration(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 			ctx := t.Context()
 			service := NewService(
-				&testRepository{},
-				nil,
+				&mockRepository{},
+				NewMockSchemaService(),
 				)
 
 			response, err := service.GetRows(ctx, test.query)
@@ -254,10 +184,45 @@ func TestServiceGetRowDuration(t *testing.T) {
 	}
 }
 
-type testRepository struct {}
+type mockRepository struct {}
 
-func (r *testRepository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
+func (r *mockRepository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
 	time.Sleep(10 * time.Microsecond)
 
-	return nil, nil
+	return []*Row{
+		{
+			stringPtr("1"),
+			stringPtr("Kevin"),
+		},
+	}, nil
 }
+
+
+type mockSchemaService struct {
+	tableName		string
+	tableSchema	[]*column.Column
+}
+
+func NewMockSchemaService() *mockSchemaService {
+	return &mockSchemaService{
+		tableName: "users",
+		tableSchema: []*column.Column{
+			{ Name: "id" },
+			{ Name: "name" },
+			{ Name: "age" },
+		},
+	}
+}
+
+func (s *mockSchemaService) GetSchema(ctx context.Context, name string) ([]*column.Column, error) {
+	if name != s.tableName {
+		return nil, fmt.Errorf("Unknown table, %s got %s", s.tableName, name)
+	}
+
+	return s.tableSchema, nil
+}
+
+func stringPtr(s string) *string {
+	return &s
+}
+

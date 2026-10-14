@@ -2,51 +2,61 @@ package session
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
-)
 
-type Middleware struct {
-	service *Service
-}
+	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
+)
 
 const cookieKey key = "session_id"
 
-func NewMiddleware(s *Service) *Middleware {
-	return &Middleware{service: s}
-}
-
-func (m *Middleware) Handler() func(http.Handler) http.Handler {
+func Middleware(s *Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var sessionId string
 			sessionCookie, err := r.Cookie(cookieKey)
 			if err != nil {
 				if errors.Is(err, http.ErrNoCookie) {
-					sessionId, err = m.service.CreateSession()
+					sessionId, err = s.CreateSession()
 					if err != nil {
-						log.Printf("middlware: error thrown while creating session, %v", err)
+						logger.LogError(
+							"session/middlware",
+							"error thrown while creating session",
+							slog.Any("error", err),
+							)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
 				} else {
-					log.Printf("middlware: error thrown while getting cookie, %v", err)
+						logger.LogError(
+							"session/middlware",
+							"error thrown while getting cookie",
+							slog.Any("error", err),
+							)
 					w.WriteHeader(http.StatusUnprocessableEntity)
 					return
 				}
 			} else {
 				sessionId = sessionCookie.Value
 				if len(sessionId) == 0 {
-					sessionId, err = m.service.CreateSession()
+					sessionId, err = s.CreateSession()
 					if err != nil {
-						log.Printf("middlware: error thrown while creating session, %v", err)
+						logger.LogError(
+							"session/middlware",
+							"error thrown while creating session",
+							slog.Any("error", err),
+							)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
 				} else {
-					if err := m.service.UpdateSession(sessionId); err != nil {
-						log.Printf("middlware: error thrown while updating session, %v", err)
+					if err := s.UpdateSession(sessionId); err != nil {
+						logger.LogError(
+							"session/middlware",
+							"error thrown while updating session",
+							slog.Any("error", err),
+							)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}

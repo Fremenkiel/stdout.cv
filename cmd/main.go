@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
 	"github.com/fremenkiel/stdout.cv/internal/row"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
@@ -21,14 +22,24 @@ import (
 )
 
 func main() {
+	logger.NewLogger()
+
 	if err := dotenv.Load(); err != nil {
-		log.Fatalf("Unable to load .env files: %v", err)
+		logger.LogFatal(
+			"main",
+			"unable to boot",
+			slog.Any("error", err),
+			)
 	}
 
 	_, err := os.Stat("/tmp/stdout_cv_sessions")
 	if err != nil {
 		if err := os.MkdirAll("/tmp/stdout_cv_sessions", os.ModePerm); err != nil {
-			log.Fatalf("Unable to create tmp folder: %v", err)
+			logger.LogFatal(
+				"main",
+				"unable to create tmp folder",
+				slog.Any("error", err),
+				)
 		}
 	}
 
@@ -53,22 +64,37 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	sessionMiddleware := session.NewMiddleware(sessionService).Handler()
+	sessionMiddleware := session.Middleware(sessionService)
 
 	mux.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./ui/static/scripts"))))
 	mux.Handle("/styles/", http.StripPrefix("/styles/", http.FileServer(http.Dir("./ui/static/styles"))))
 
 	requireHtml := middleware.EnforceAccept("text/html")
+
 	table.NewRouter(
 		mux,
-		sessionMiddleware(requireHtml),
 		tableHandler,
+		logger.LogRequestHandler,
+		requireHtml,
+		sessionMiddleware,
 		)
-	row.NewRouter(mux, rowHandler)
+	row.NewRouter(
+		mux,
+		rowHandler,
+		logger.LogRequestHandler,
+		requireHtml,
+		sessionMiddleware,
+		)
 
 	port := os.Getenv("PORT")
 	address := fmt.Sprintf(":%s", port)
-	log.Printf("Server listing on 127.0.0.1%s", address)
+
+	logger.LogInfo(
+		"main",
+		"server started",
+		slog.String("address", "127.0.0.1"),
+		slog.String("port", port),
+		)
 
 	server := http.Server{
 		Addr: address,
@@ -82,18 +108,36 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP server error: %v", err)
+			logger.LogInfo(
+				"main",
+				"http listen and serve error",
+				slog.Any("error", err),
+				)
 		}
 	}()
 
 	<-ctx.Done()
-	log.Print("Shutdown signel recived")
+	startShutdown := time.Now()
+	logger.LogInfo(
+		"main",
+		"shutdown signel recived",
+		slog.Int64("recived_at", startShutdown.Unix()),
+		)
 
 	shotdownCtx, shotdownRelease := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shotdownRelease()
 
 	if err := server.Shutdown(shotdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
+		logger.LogInfo(
+			"main",
+			"unable to gracefully shutdown http server",
+			slog.Any("error", err),
+			)
 	}
-	log.Print("Shutdown complete")
+
+	logger.LogInfo(
+		"main",
+		"shutdown complete",
+		slog.Int64("duration_ms", time.Now().Sub(startShutdown).Milliseconds()),
+		)
 }

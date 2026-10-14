@@ -6,71 +6,40 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/column"
 )
 
+type Query struct {
+	Fields						[]string
+	WildcardIndex			int16
+	TableName					string
+	Type							string
+	Modifiers					[]string
+	currentContext		string
+	endMarkerReached	bool
+}
+
+func NewQuery() *Query {
+	return &Query{
+		WildcardIndex: -1,
+		currentContext: "",
+		endMarkerReached: false,
+	}
+}
+
 // Parses query string to Query struct.
 // Fields are only populated on queries that would return fields.
 // Multiple queries are not supported.
 func Parse(queryString string) (*Query, error) {
-	queryParts := strings.Split(queryString, " ")
+	lines := strings.Split(queryString, "\n")
 
-	query := &Query{
-		WildcardIndex: -1,
+	query := NewQuery()
+
+	for _, line := range lines {
+		if err := query.parseLine(line); err != nil {
+			return nil, err
+		}
 	}
 
-	lastIndex := len(queryParts) - 1
-
-	var current string
-	Outerloop:
-	for i, part := range queryParts {
-		if current == COMMENT {
-			if !strings.Contains(part, "\n") {
-				continue
-			} else {
-				current = ""
-				lineParts := strings.Split(part, "\n")
-				part = lineParts[len(lineParts) - 1]
-			}
-		}
-
-		if strings.Contains(part, "--") {
-			current = COMMENT
-		}
-		if strings.Contains(part, ";") {
-			if i != lastIndex {
-				return nil, ErrQueryNotAllowed
-			} else {
-				part = strings.Trim(part, ";")
-			}
-		}
-
-		for _, queryMod := range queryModifiers {
-			if strings.EqualFold(part, queryMod) {
-				current = queryMod
-				query.Modifiers = append(query.Modifiers, queryMod)
-				continue Outerloop
-			}
-		}
-
-		for _, queryType := range queryTypes {
-			if strings.EqualFold(part, queryType) {
-				if query.Type != "" {
-					return nil, ErrQueryNotAllowed
-				}
-				query.Type = queryType
-				current = queryType
-				continue Outerloop
-			}
-		}
-
-		switch current {
-		case SELECT:
-			query.Fields, query.WildcardIndex = parseSelectField(query.Fields, part)
-			continue
-		case FROM, INTO, UPDATE:
-			if query.TableName == "" {
-				query.TableName = part
-			}
-			continue
-		}
+	if !query.endMarkerReached {
+		return nil, ErrQueryEndMarkerMissing
 	}
 
 	return query, nil
@@ -95,11 +64,64 @@ func AppendWildcardSchema(wildcardIndex int16, fields []string, schema []*column
 	return fields, nil
 }
 
+func (q *Query) parseLine(line string) error {
+	queryParts := strings.Split(line, " ")
+
+	Outerloop:
+	for _, part := range queryParts {
+		if strings.Contains(part, "--") {
+			return nil
+		}
+
+		if q.endMarkerReached {
+			return ErrMultipleQueries
+		}
+
+		if strings.Contains(part, ";") {
+			q.endMarkerReached = true
+			part = strings.Trim(part, ";")
+		}
+
+		for _, queryMod := range queryModifiers {
+			if strings.EqualFold(part, queryMod) {
+				q.currentContext = queryMod
+				q.Modifiers = append(q.Modifiers, queryMod)
+				continue Outerloop
+			}
+		}
+
+		for _, queryType := range queryTypes {
+			if strings.EqualFold(part, queryType) {
+				if q.Type != "" {
+					return ErrQueryNotAllowed
+				}
+				q.Type = queryType
+				q.currentContext = queryType
+				continue Outerloop
+			}
+		}
+
+		switch q.currentContext {
+		case SELECT:
+			if err := q.parseSelectField(part); err != nil {
+				return err
+			}
+			continue
+		case FROM, INTO, UPDATE:
+			if q.TableName == "" {
+				q.TableName = part
+			}
+			continue
+		}
+	}
+
+	return nil
+}
+
+
 // parseSelectField parses a comma seperated select field string and appends them to the fields slice.
 // Returns the populated fields slice, alongside a windcard index whice is -1 if none found.
-func parseSelectField(fields []string, str string) ([]string, int16) {
-	var windcardIndex int16 = -1
-
+func (q *Query) parseSelectField(str string) error {
 	selectFields := strings.Split(str, ",")
 	for i, field := range selectFields {
 		if len(field) == 0 {
@@ -107,11 +129,14 @@ func parseSelectField(fields []string, str string) ([]string, int16) {
 		}
 
 		if field == "*" {
-			windcardIndex = int16(len(fields))
+			if q.WildcardIndex != -1 {
+				return ErrDuplicateWildcard
+			}
+			q.WildcardIndex = int16(len(q.Fields))
 		}
 
-		fields = append(fields, selectFields[i])
+		q.Fields = append(q.Fields, selectFields[i])
 	}
 
-	return fields, windcardIndex
+	return nil
 }

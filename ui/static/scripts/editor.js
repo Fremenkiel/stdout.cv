@@ -6,7 +6,7 @@ var editor = CodeMirror.fromTextArea(document.getElementById('textarea-query'), 
 
 document.addEventListener('keydown', (e) => {
   if (e.key === "Enter" &&
-    (e.composed || e.ctrlKey)) {
+    (e.metaKey || e.ctrlKey)) {
     document.getElementById('submit-query').click();
   }
 });

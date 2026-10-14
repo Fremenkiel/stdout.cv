@@ -2,13 +2,12 @@ package row
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
+	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/query"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
@@ -49,7 +48,11 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 				Message: "The entered query is not allowed at this point in time",
 			}
 			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
-				log.Printf("row: error thrown while rendering error container, %v", err)
+				logger.LogError(
+					"row/handler",
+					"error returned while rendering error container",
+					slog.Any("error", err),
+					)
 				w.WriteHeader(http.StatusInternalServerError)
 			}
 			return
@@ -57,24 +60,30 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 		if libErr, ok := lib.ParseSqliteError(err); ok {
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
-				log.Printf("row: error thrown while rendering error container, %v", err)
+				logger.LogError(
+					"row/handler",
+					"error returned while rendering error container",
+					slog.Any("error", err),
+					)
 				w.WriteHeader(http.StatusInternalServerError)
 			}
 			return
 		}
-		log.Printf("Error thrown: %v", err)
+		logger.LogError(
+			"row/handler",
+			"error returned while getting rows",
+			slog.Any("error", err),
+			)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if !strings.Contains(r.Header.Get("Accept"), "application/") {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(result)
-		return
-	}
-
-	if ctx.Err() != nil {
-		log.Printf("row: context error, %v", err)
+	if err := ctx.Err(); err != nil {
+		logger.LogError(
+			"row/handler",
+			"context error",
+			slog.Any("error", err),
+			)
 		w.WriteHeader(http.StatusRequestTimeout)
 		return
 	}
@@ -82,7 +91,11 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 	viewData := h.getResultViewData(result)
 
 	if err := h.renderer.RenderFragment(w, "result", viewData); err != nil {
-		log.Printf("row: error thrown while rendering, %v", err)
+		logger.LogError(
+			"row/handler",
+			"error returned while rendering",
+			slog.Any("error", err),
+			)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

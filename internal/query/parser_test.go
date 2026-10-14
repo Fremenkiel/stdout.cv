@@ -89,6 +89,22 @@ func TestParse(t *testing.T) {
 			expectedError: nil,
 		},
 		{
+			name: "select_without_where",
+			queryString: "select * from users;",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: SELECT,
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
+		{
 			name: "select_mixed_case",
 			queryString: "sElEcT name, email, age fRoM users wHeRe id = 1;",
 			expectedResponse: &Query{
@@ -194,13 +210,13 @@ func TestParse(t *testing.T) {
 			name: "delete_and_select",
 			queryString: "delete from files where id = 1; select name from users where id = 1;",
 			expectedResponse: nil,
-			expectedError: ErrQueryNotAllowed,
+			expectedError: ErrMultipleQueries,
 		},
 		{
 			name: "semicolon",
 			queryString: "select name; from users where id = 1;",
 			expectedResponse: nil,
-			expectedError: ErrQueryNotAllowed,
+			expectedError: ErrMultipleQueries,
 		},
 		{
 			name: "semicolon_at_end",
@@ -238,14 +254,8 @@ func TestParse(t *testing.T) {
 		{
 			name: "comment_inside",
 			queryString: "select --name from users where id = 1;",
-			expectedResponse: &Query{
-				Fields: []string{},
-				WildcardIndex: -1,
-				TableName: "",
-				Type: SELECT,
-				Modifiers: []string{},
-			},
-			expectedError: nil,
+			expectedResponse: nil,
+			expectedError: ErrQueryEndMarkerMissing,
 		},
 		{
 			name: "comment_space_at_line_break",
@@ -298,8 +308,34 @@ func TestParse(t *testing.T) {
 		{
 			name: "comment_end",
 			queryString: "select * from users;\n-- do not process this part",
-			expectedResponse: nil,
-			expectedError: ErrQueryNotAllowed,
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: "SELECT",
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "multiple_lines",
+			queryString: "select\n *\n from\n users;\n-- do not process this part",
+			expectedResponse: &Query{
+				Fields: []string{
+					"*",
+				},
+				WildcardIndex: 0,
+				TableName: "users",
+				Type: "SELECT",
+				Modifiers: []string{
+					FROM,
+				},
+			},
+			expectedError: nil,
 		},
 	}
 
@@ -435,14 +471,17 @@ func TestParseFields(t *testing.T) {
 	tests := []struct{
 		name									string
 		fieldStr							string
-		fieldSlice						[]string
+		query									*Query
 		expectedResponse			[]string
 		expectedWindcardIndex	int16
 	} {
 		{
 			name: "without_windcard",
 			fieldStr: "first_name,last_name,email,password_hash",
-			fieldSlice: []string{},
+			query: &Query{
+				WildcardIndex: -1,
+				currentContext: "",
+			},
 			expectedResponse: []string{
 				"first_name",
 				"last_name",
@@ -454,7 +493,10 @@ func TestParseFields(t *testing.T) {
 		{
 			name: "with_windcard",
 			fieldStr: "first_name,*,last_name,email,password_hash",
-			fieldSlice: []string{},
+			query: &Query{
+				WildcardIndex: -1,
+				currentContext: "",
+			},
 			expectedResponse: []string{
 				"first_name",
 				"*",
@@ -467,8 +509,12 @@ func TestParseFields(t *testing.T) {
 		{
 			name: "without_windcard_append_correct",
 			fieldStr: "first_name,last_name,email,password_hash",
-			fieldSlice: []string{
-				"username",
+			query: &Query{
+				WildcardIndex: -1,
+				currentContext: "",
+				Fields: []string{
+					"username",
+				},
 			},
 			expectedResponse: []string{
 				"username",
@@ -482,8 +528,12 @@ func TestParseFields(t *testing.T) {
 		{
 			name: "with_windcard_append_correct",
 			fieldStr: "first_name,*,last_name,email,password_hash",
-			fieldSlice: []string{
-				"username",
+			query: &Query{
+				WildcardIndex: -1,
+				currentContext: "",
+				Fields: []string{
+					"username",
+				},
 			},
 			expectedResponse: []string{
 				"username",
@@ -498,7 +548,10 @@ func TestParseFields(t *testing.T) {
 		{
 			name: "with_windcard_wrong_format",
 			fieldStr: "first_name,*last_name,email,password_hash",
-			fieldSlice: []string{},
+			query: &Query{
+				WildcardIndex: -1,
+				currentContext: "",
+			},
 			expectedResponse: []string{
 				"first_name",
 				"*last_name",
@@ -510,7 +563,10 @@ func TestParseFields(t *testing.T) {
 		{
 			name: "no_comma",
 			fieldStr: "first_name*last_nameemailpassword_hash",
-			fieldSlice: []string{},
+			query: &Query{
+				WildcardIndex: -1,
+				currentContext: "",
+			},
 			expectedResponse: []string{
 				"first_name*last_nameemailpassword_hash",
 			},
@@ -522,14 +578,16 @@ func TestParseFields(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			response, windcardIndex := parseSelectField(test.fieldSlice, test.fieldStr)
-
-			if !testutil.SliceEql(test.expectedResponse, response) {
-				t.Fatalf("response do not match, expected %v, got %v", test.expectedResponse, response)
+			if err := test.query.parseSelectField(test.fieldStr); err != nil {
+				t.Fatalf("error returnes while parseSelectField, %v", err)
 			}
 
-			if windcardIndex != test.expectedWindcardIndex {
-				t.Fatalf("wrong windcard index, expected %d, got %d", test.expectedWindcardIndex, windcardIndex)
+			if !testutil.SliceEql(test.expectedResponse, test.query.Fields) {
+				t.Fatalf("response do not match, expected %v, got %v", test.expectedResponse, test.query.Fields)
+			}
+
+			if test.query.WildcardIndex != test.expectedWindcardIndex {
+				t.Fatalf("wrong windcard index, expected %d, got %d", test.expectedWindcardIndex, test.query.WildcardIndex)
 			}
 		})
 	}
