@@ -31,3 +31,10 @@ var queryModifiers []string = []string{
 	VALUES,
 }
 
+type Query struct {
+	Fields						[]string
+	WildcardIndex			int16
+	TableName					string
+	Type							string
+	Modifiers					[]string
+}

@@ -7,6 +7,322 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
+// func TestReadUntil(t *testing.T) {
+// 	tests := []struct{
+// 		name							string
+// 		parser						*Parser
+// 		char							byte
+// 		expectedResponse	[]byte
+// 	} {
+// 		{
+// 			name: "linebreak",
+// 			parser: &Parser{
+// 				buf: []byte("--Just a test\nSELECT * FROM users;"),
+// 				len: len("--Just a test\nSELECT * FROM users;"),
+// 				r:	-1,
+// 				p: 0,
+// 			},
+// 			char: '\n',
+// 			expectedResponse: []byte("--Just a test"),
+// 		},
+// 		{
+// 			name: "at_end",
+// 			parser: &Parser{
+// 				buf: []byte("--Just a test\nSELECT * FROM users;"),
+// 				len: len("--Just a test\nSELECT * FROM users;"),
+// 				r:	33,
+// 				p: 34,
+// 			},
+// 			char: '\n',
+// 			expectedResponse: []byte{},
+// 		},
+// 		{
+// 			name: "exeeded_end",
+// 			parser: &Parser{
+// 				buf: []byte("--Just a test\nSELECT * FROM users;"),
+// 				len: len("--Just a test\nSELECT * FROM users;"),
+// 				r:	34,
+// 				p: 35,
+// 			},
+// 			char: '\n',
+// 			expectedResponse: []byte{},
+// 		},
+// 		{
+// 			name: "invalie_len",
+// 			parser: &Parser{
+// 				buf: []byte("--Just a test\nSELECT * FROM users;"),
+// 				len: 0,
+// 				r:	-1,
+// 				p: 0,
+// 			},
+// 			char: '\n',
+// 			expectedResponse: []byte{},
+// 		},
+// 	}
+//
+// 	for _, test := range tests {
+// 		t.Run(test.name, func(t *testing.T) {
+// 			response := test.parser.readUntil(test.char)
+//
+// 			if !testutil.SliceEql(test.expectedResponse, response) {
+// 				t.Fatalf("unexpected response, %s (%v) got %s (%v)", string(test.expectedResponse), test.expectedResponse, string(response), response)
+// 			}
+//
+// 			if test.parser.r > test.parser.p {
+// 				t.Fatalf("unexpected peak index, %d got %d", test.parser.r, test.parser.p)
+// 			}
+// 		})
+// 	}
+// }
+
+func TestIsComment(t *testing.T) {
+	tests := []struct{
+		name							string
+		parser						*Parser
+		expectedResponse	bool
+		expectedReadIndex	int
+		expectedPeakIndex	int
+	} {
+		{
+			name: "comment",
+			parser: NewParser("--Test"),
+			expectedResponse: true,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 1,
+		},
+		{
+			name: "white_space",
+			parser: NewParser(" --Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "rand_char",
+			parser: NewParser("t--Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := test.parser.isComment()
+
+			if test.expectedResponse != response {
+				t.Fatalf("unexpected response, %v got %v", test.expectedResponse, response)
+			}
+
+			if test.expectedReadIndex > test.parser.r {
+				t.Fatalf("unexpected read index, %d got %d", test.expectedReadIndex, test.parser.r)
+			}
+
+			if test.expectedPeakIndex > test.parser.p {
+				t.Fatalf("unexpected peak index, %d got %d", test.expectedPeakIndex, test.parser.p)
+			}
+		})
+	}
+}
+
+func TestIsWhiteSpaceOrSeperatorChar(t *testing.T) {
+	tests := []struct{
+		name							string
+		parser						*Parser
+		expectedResponse	bool
+		expectedReadIndex	int
+		expectedPeakIndex	int
+	} {
+		{
+			name: "white_space",
+			parser: NewParser(" --Test"),
+			expectedResponse: true,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "line_break",
+			parser: NewParser("\n--Test"),
+			expectedResponse: true,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "tab",
+			parser: NewParser("\t--Test"),
+			expectedResponse: true,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "comma",
+			parser: NewParser(",--Test"),
+			expectedResponse: true,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "comment",
+			parser: NewParser("--Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "rand_char",
+			parser: NewParser("t--Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := test.parser.isWhiteSpaceOrSeperatorChar()
+
+			if test.expectedResponse != response {
+				t.Fatalf("unexpected response, %v got %v", test.expectedResponse, response)
+			}
+
+			if test.expectedReadIndex > test.parser.r {
+				t.Fatalf("unexpected read index, %d got %d", test.expectedReadIndex, test.parser.r)
+			}
+
+			if test.expectedPeakIndex > test.parser.p {
+				t.Fatalf("unexpected peak index, %d got %d", test.expectedPeakIndex, test.parser.p)
+			}
+		})
+	}
+}
+
+func TestIsEndChar(t *testing.T) {
+	tests := []struct{
+		name							string
+		parser						*Parser
+		expectedResponse	bool
+		expectedReadIndex	int
+		expectedPeakIndex	int
+	} {
+		{
+			name: "end_char",
+			parser: NewParser(";--Test"),
+			expectedResponse: true,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "white_space",
+			parser: NewParser(" --Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "comment",
+			parser: NewParser("--Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+		{
+			name: "rand_char",
+			parser: NewParser("t--Test"),
+			expectedResponse: false,
+			expectedReadIndex: -1,
+			expectedPeakIndex: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := test.parser.isEndChar()
+
+			if test.expectedResponse != response {
+				t.Fatalf("unexpected response, %v got %v", test.expectedResponse, response)
+			}
+
+			if test.expectedReadIndex > test.parser.r {
+				t.Fatalf("unexpected read index, %d got %d", test.expectedReadIndex, test.parser.r)
+			}
+
+			if test.expectedPeakIndex > test.parser.p {
+				t.Fatalf("unexpected peak index, %d got %d", test.expectedPeakIndex, test.parser.p)
+			}
+		})
+	}
+}
+
+func TestReadWord(t *testing.T) {
+	tests := []struct{
+		name								string
+		parser							*Parser
+		expectedResponse		[]byte
+		expectedEndReached	bool
+	} {
+		{
+			name: "white_space",
+			parser: NewParser("SELECT *"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: false,
+		},
+		{
+			name: "end_char",
+			parser: NewParser("SELECT; *"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: true,
+		},
+		{
+			name: "tab",
+			parser: NewParser("SELECT\t*"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: false,
+		},
+		{
+			name: "line_break",
+			parser: NewParser("SELECT\n*"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: false,
+		},
+		{
+			name: "comma",
+			parser: NewParser("SELECT,*"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: false,
+		},
+		{
+			name: "comment",
+			parser: NewParser("SELECT--*"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: false,
+		},
+		{
+			name: "norm_end",
+			parser: NewParser("SELECT;"),
+			expectedResponse: []byte("SELECT"),
+			expectedEndReached: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response, endMarkerReached := test.parser.readWord()
+
+			if !testutil.SliceEql(test.expectedResponse, response) {
+				t.Fatalf("unexpected response, %s (%v) got %s (%v)", string(test.expectedResponse), test.expectedResponse, string(response), response)
+			}
+
+			if test.parser.r > test.parser.p {
+				t.Fatalf("unexpected peak index, %d got %d", test.parser.r, test.parser.p)
+			}
+
+			if test.expectedEndReached != endMarkerReached {
+				t.Fatalf("unexpected end marker reached state, %v got %v", test.expectedEndReached, endMarkerReached)
+			}
+		})
+	}
+}
+
 func TestParse(t *testing.T) {
 	tests := []struct{
 		name							string
@@ -126,21 +442,8 @@ func TestParse(t *testing.T) {
 		{
 			name: "select_two_table_names",
 			queryString: "select name, email, age from files users where id = 1;",
-			expectedResponse: &Query{
-				Fields: []string{
-					"name",
-					"email",
-					"age",
-				},
-				WildcardIndex: -1,
-				TableName: "files",
-				Type: SELECT,
-				Modifiers: []string{
-					FROM,
-					WHERE,
-				},
-			},
-			expectedError: nil,
+			expectedResponse: nil,
+			expectedError: ErrQueryNotAllowed,
 		},
 		{
 			name: "update",
@@ -190,27 +493,14 @@ func TestParse(t *testing.T) {
 		{
 			name: "multiple_select",
 			queryString: "select * from files where owner_id IN (select id from users where id = 1);",
-			expectedResponse: &Query{
-				Fields: []string{
-					"*",
-				},
-				WildcardIndex: 0,
-				TableName: "files",
-				Type: SELECT,
-				Modifiers: []string{
-					FROM,
-					WHERE,
-					FROM,
-					WHERE,
-				},
-			},
-			expectedError: nil,
+			expectedResponse: nil,
+			expectedError: ErrQueryNotAllowed,
 		},
 		{
 			name: "delete_and_select",
 			queryString: "delete from files where id = 1; select name from users where id = 1;",
 			expectedResponse: nil,
-			expectedError: ErrMultipleQueries,
+			expectedError: ErrQueryNotAllowed,
 		},
 		{
 			name: "semicolon",
@@ -487,106 +777,89 @@ func TestParseFields(t *testing.T) {
 	tests := []struct{
 		name									string
 		fieldStr							string
-		query									*Query
+		parser								*Parser
 		expectedResponse			[]string
 		expectedWindcardIndex	int16
+		expectedError					error
 	} {
 		{
-			name: "without_windcard",
-			fieldStr: "first_name,last_name,email,password_hash",
-			query: &Query{
-				WildcardIndex: -1,
-				currentContext: "",
+			name: "word",
+			fieldStr: "first_name",
+			parser: &Parser{
+				Result: &Query{
+					WildcardIndex: -1,
+				},
 			},
-			expectedResponse: []string{
+			expectedResponse: []string {
 				"first_name",
-				"last_name",
-				"email",
-				"password_hash",
 			},
 			expectedWindcardIndex: -1,
+			expectedError: nil,
 		},
 		{
-			name: "with_windcard",
-			fieldStr: "first_name,*,last_name,email,password_hash",
-			query: &Query{
-				WildcardIndex: -1,
-				currentContext: "",
+			name: "wildcard",
+			fieldStr: "*",
+			parser: &Parser{
+				Result: &Query{
+					WildcardIndex: -1,
+				},
 			},
-			expectedResponse: []string{
-				"first_name",
+			expectedResponse: []string {
 				"*",
-				"last_name",
-				"email",
-				"password_hash",
+			},
+			expectedWindcardIndex: 0,
+			expectedError: nil,
+		},
+		{
+			name: "multiple_wildcards",
+			fieldStr: "*",
+			parser: &Parser{
+				Result: &Query{
+					WildcardIndex: 0,
+					Fields: []string{
+						"*",
+					},
+				},
+			},
+			expectedResponse: nil,
+			expectedWindcardIndex: 0,
+			expectedError: ErrMultipleWildcard,
+		},
+		{
+			name: "word_with_fields",
+			fieldStr: "first_name",
+			parser: &Parser{
+				Result: &Query{
+					WildcardIndex: -1,
+					Fields: []string{
+						"age",
+					},
+				},
+			},
+			expectedResponse: []string {
+				"age",
+				"first_name",
+			},
+			expectedWindcardIndex: -1,
+			expectedError: nil,
+		},
+		{
+			name: "wildcard_with_fields",
+			fieldStr: "*",
+			parser: &Parser{
+				Result: &Query{
+					WildcardIndex: -1,
+					Fields: []string{
+						"age",
+					},
+				},
+			},
+			expectedResponse: []string {
+				"age",
+				"*",
 			},
 			expectedWindcardIndex: 1,
-		},
-		{
-			name: "without_windcard_append_correct",
-			fieldStr: "first_name,last_name,email,password_hash",
-			query: &Query{
-				WildcardIndex: -1,
-				currentContext: "",
-				Fields: []string{
-					"username",
-				},
-			},
-			expectedResponse: []string{
-				"username",
-				"first_name",
-				"last_name",
-				"email",
-				"password_hash",
-			},
-			expectedWindcardIndex: -1,
-		},
-		{
-			name: "with_windcard_append_correct",
-			fieldStr: "first_name,*,last_name,email,password_hash",
-			query: &Query{
-				WildcardIndex: -1,
-				currentContext: "",
-				Fields: []string{
-					"username",
-				},
-			},
-			expectedResponse: []string{
-				"username",
-				"first_name",
-				"*",
-				"last_name",
-				"email",
-				"password_hash",
-			},
-			expectedWindcardIndex: 2,
-		},
-		{
-			name: "with_windcard_wrong_format",
-			fieldStr: "first_name,*last_name,email,password_hash",
-			query: &Query{
-				WildcardIndex: -1,
-				currentContext: "",
-			},
-			expectedResponse: []string{
-				"first_name",
-				"*last_name",
-				"email",
-				"password_hash",
-			},
-			expectedWindcardIndex: -1,
-		},
-		{
-			name: "no_comma",
-			fieldStr: "first_name*last_nameemailpassword_hash",
-			query: &Query{
-				WildcardIndex: -1,
-				currentContext: "",
-			},
-			expectedResponse: []string{
-				"first_name*last_nameemailpassword_hash",
-			},
-			expectedWindcardIndex: -1,
+			expectedError: nil,
 		},
 	}
 
@@ -594,16 +867,20 @@ func TestParseFields(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			if err := test.query.parseSelectField(test.fieldStr); err != nil {
-				t.Fatalf("error returnes while parseSelectField, %v", err)
+			if err := test.parser.parseSelectField(test.fieldStr); err != test.expectedError {
+				t.Fatalf("unexpected error, %v got %v", test.expectedError, err)
 			}
 
-			if !testutil.SliceEql(test.expectedResponse, test.query.Fields) {
-				t.Fatalf("response do not match, expected %v, got %v", test.expectedResponse, test.query.Fields)
+			if test.expectedError != nil {
+				return
 			}
 
-			if test.query.WildcardIndex != test.expectedWindcardIndex {
-				t.Fatalf("wrong windcard index, expected %d, got %d", test.expectedWindcardIndex, test.query.WildcardIndex)
+			if !testutil.SliceEql(test.expectedResponse, test.parser.Result.Fields) {
+				t.Fatalf("response do not match, expected %v, got %v", test.expectedResponse, test.parser.Result.Fields)
+			}
+
+			if test.parser.Result.WildcardIndex != test.expectedWindcardIndex {
+				t.Fatalf("wrong windcard index, expected %d, got %d", test.expectedWindcardIndex, test.parser.Result.WildcardIndex)
 			}
 		})
 	}

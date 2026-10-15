@@ -4,7 +4,7 @@ import (
 	"slices"
 )
 
-func SliceEql(slice1 []string, slice2 []string) bool {
+func SliceEql[T comparable](slice1 []T, slice2 []T) bool {
 	if len(slice1) != len(slice2) {
 		return false
 	}

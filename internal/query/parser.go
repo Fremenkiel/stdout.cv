@@ -6,43 +6,61 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/column"
 )
 
-type Query struct {
-	Fields						[]string
-	WildcardIndex			int16
-	TableName					string
-	Type							string
-	Modifiers					[]string
+type Parser struct {
+	Result						*Query
+	buf								[]byte
+	r, p							int
+	len								int
 	currentContext		string
-	endMarkerReached	bool
 }
 
-func NewQuery() *Query {
-	return &Query{
-		WildcardIndex: -1,
+func NewParser(str string) *Parser {
+	return &Parser{
+		Result: &Query{
+			WildcardIndex: -1,
+		},
+		buf: []byte(str),
+		r: -1,
+		p: 0,
+		len: len(str),
 		currentContext: "",
-		endMarkerReached: false,
 	}
 }
 
 // Parses query string to Query struct.
 // Fields are only populated on queries that would return fields.
 // Multiple queries are not supported.
-func Parse(queryString string) (*Query, error) {
-	lines := strings.Split(queryString, "\n")
+func Parse(query string) (*Query, error) {
+	if len(query) <= 0 {
+		return nil, ErrNoQuery
+	}
 
-	query := NewQuery()
+	var endMarkerReached bool
 
-	for _, line := range lines {
-		if err := query.parseLine(line); err != nil {
-			return nil, err
+	parser := NewParser(query)
+	for !parser.atEnd() {
+		w, eof := parser.readWord()
+
+		if eof && endMarkerReached {
+			return nil, ErrMultipleQueries
+		}
+
+		if len(w) > 0 {
+			if err := parser.parseWord(string(w)); err != nil {
+				return nil, err
+			}
+		}
+
+		if eof {
+			endMarkerReached = true
 		}
 	}
 
-	if !query.endMarkerReached {
+	if !endMarkerReached {
 		return nil, ErrQueryEndMarkerMissing
 	}
 
-	return query, nil
+	return parser.Result, nil
 }
 
 func AppendWildcardSchema(wildcardIndex int16, fields []string, schema []*column.Column) ([]string, error) {
@@ -64,66 +82,36 @@ func AppendWildcardSchema(wildcardIndex int16, fields []string, schema []*column
 	return fields, nil
 }
 
-func (q *Query) parseLine(line string) error {
-	querySeq := strings.SplitSeq(line, " ")
-
-	for seq := range querySeq {
-		if err := q.parseSeq(seq); err != nil {
-			return err
+func (p *Parser) parseWord(word string) error {
+	for _, queryMod := range queryModifiers {
+		if strings.EqualFold(word, queryMod) {
+			p.currentContext = queryMod
+			p.Result.Modifiers = append(p.Result.Modifiers, queryMod)
+			return nil
 		}
 	}
 
-	return nil
-}
-
-func (q *Query) parseSeq(seq string) error {
-	queryPart := strings.SplitSeq(seq, "\t")
-
-	for part := range queryPart {
-		if strings.Contains(part, "--") {
+	for _, queryType := range queryTypes {
+		if strings.EqualFold(word, queryType) {
+			if p.Result.Type != "" {
+				return ErrQueryNotAllowed
+			}
+			p.Result.Type = queryType
+			p.currentContext = queryType
 			return nil
 		}
+	}
 
-		if q.endMarkerReached {
-			return ErrMultipleQueries
+	switch p.currentContext {
+	case SELECT:
+		if err := p.parseSelectField(word); err != nil {
+			return err
 		}
-
-		if strings.Contains(part, ";") {
-			q.endMarkerReached = true
-			part = strings.Trim(part, ";")
+	case FROM, INTO, UPDATE:
+		if p.Result.TableName != "" {
+			return ErrQueryNotAllowed
 		}
-
-		for _, queryMod := range queryModifiers {
-			if strings.EqualFold(part, queryMod) {
-				q.currentContext = queryMod
-				q.Modifiers = append(q.Modifiers, queryMod)
-				return nil
-			}
-		}
-
-		for _, queryType := range queryTypes {
-			if strings.EqualFold(part, queryType) {
-				if q.Type != "" {
-					return ErrQueryNotAllowed
-				}
-				q.Type = queryType
-				q.currentContext = queryType
-				return nil
-			}
-		}
-
-		switch q.currentContext {
-		case SELECT:
-			if err := q.parseSelectField(part); err != nil {
-				return err
-			}
-			continue
-		case FROM, INTO, UPDATE:
-			if q.TableName == "" {
-				q.TableName = part
-			}
-			continue
-		}
+		p.Result.TableName = word
 	}
 
 	return nil
@@ -131,22 +119,143 @@ func (q *Query) parseSeq(seq string) error {
 
 // parseSelectField parses a comma seperated select field string and appends them to the fields slice.
 // Returns the populated fields slice, alongside a windcard index whice is -1 if none found.
-func (q *Query) parseSelectField(str string) error {
-	selectFields := strings.Split(str, ",")
-	for i, field := range selectFields {
-		if len(field) == 0 {
-			continue
+func (p *Parser) parseSelectField(word string) error {
+	if word == "*" {
+		if p.Result.WildcardIndex != -1 {
+			return ErrMultipleWildcard 
 		}
-
-		if field == "*" {
-			if q.WildcardIndex != -1 {
-				return ErrDuplicateWildcard
-			}
-			q.WildcardIndex = int16(len(q.Fields))
-		}
-
-		q.Fields = append(q.Fields, selectFields[i])
+		p.Result.WildcardIndex = int16(len(p.Result.Fields))
 	}
 
+	p.Result.Fields = append(p.Result.Fields, word)
+
 	return nil
+}
+
+// returns word and whether EOF
+func (p *Parser) readWord() ([]byte, bool) {
+	// Assumig each word is at mostly 10 char in len of the string based on:
+	// SELECT * FROM educations WHERE user_id = 1;
+	buf := make([]byte, 0, 10)
+
+	for !p.atEnd() {
+		if p.isComment() {
+			_ = p.readUntil('\n')
+
+			// consume the new line char
+			_ = p.readByte()
+
+			if len(buf) != 0 {
+				return buf, false
+			}
+		}
+
+		if p.isWhiteSpaceOrSeperatorChar() {
+			// consume white space char
+			_ = p.readByte()
+
+			if len(buf) != 0 {
+				return buf, false
+			}
+		}
+
+		if p.isEndChar() {
+			// consume end char
+			_ = p.readByte()
+
+			return buf, true
+		}
+
+		buf = append(buf, p.readByte())
+	}
+
+	return buf, false
+}
+
+func (p *Parser) isComment() bool {
+	if p.peakByte() != '-' {
+		return false
+	}
+	
+	if atEnd := p.advancePeak(); atEnd {
+		return false
+	}
+
+	if p.peakByte() != '-' {
+		p.resetPeak()
+		return false
+	}
+
+	return true
+}
+
+func (p *Parser) isWhiteSpaceOrSeperatorChar() bool {
+	switch p.peakByte() {
+	case '\n':
+		return true
+	case ' ':
+		return true
+	case '\t':
+		return true
+	case ',':
+		return true
+	}
+	return false
+}
+
+func (p *Parser) isEndChar() bool {
+	return p.peakByte() == ';'
+}
+
+func (p *Parser) readUntil(char byte) []byte {
+	if p.atEnd() {
+		return []byte{}
+	}
+
+	buf := make([]byte, 0, 10)
+
+	b := p.readByte()
+	for b != char && !p.atEnd() {
+		buf = append(buf, b)
+
+		b = p.readByte()
+	}
+
+	return buf
+}
+
+func (p *Parser) readByte() byte {
+	p.r = p.r + 1
+
+	p.resetPeak()
+
+	if p.atEnd() {
+		return byte(0)
+	}
+
+	return p.buf[p.r]
+}
+
+func (p *Parser) resetPeak() {
+	p.p = p.r
+
+	// assuming reset is only called when peak has been advanced beyond r + 1
+	_ = p.advancePeak()
+}
+
+// returns whether or not EOF has been reached
+func (p *Parser) advancePeak() bool {
+	if pi := p.p + 1; pi < p.len {
+		p.p = pi
+		return false
+	}
+	return true
+}
+
+func (p *Parser) peakByte() byte {
+	return p.buf[p.p]
+}
+
+func (p *Parser) atEnd() bool {
+	return p.r >= (p.len - 1)
 }
