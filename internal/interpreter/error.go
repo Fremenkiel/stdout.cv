@@ -43,6 +43,7 @@ var (
 		InvalidQuery: "Query is invalid formatted",
 		InvalidInsertStatement: "Invalid INSERT statement, add",
 		InvalidField: "Unexpected token type when trying to parse field, got",
+		InvalidTypeForExpressionPrecedence: "Invalid token type for expression, precedence not set for",
 
 		UnexpectedEOF: "Unexpected end of file after",
 		UnknownBaseNodeType: "Unknown base node type recived, this might be a resulte of a falty query before the current",
@@ -58,6 +59,7 @@ const (
 	InvalidQuery
 	InvalidInsertStatement
 	InvalidField
+	InvalidTypeForExpressionPrecedence
 
 	UnexpectedEOF
 	UnknownBaseNodeType

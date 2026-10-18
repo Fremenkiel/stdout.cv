@@ -110,3 +110,6 @@ const (
 	// VALUES
 	NULL			TokenType = "NULL"
 )
+
+var precedenceMap = map[TokenType]int{
+}

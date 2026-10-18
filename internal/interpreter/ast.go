@@ -61,11 +61,102 @@ func (f *FieldNode) String() string {
 
 type ExpressionNode struct {
 	baseNode
+	precedence	int
+
 	prefix,
 	suffix 	Node
 }
 
 var _ Node = (*ExpressionNode)(nil)
+
+func newExpressionNode(parser *Parser) (*ExpressionNode, error) {
+	var node ExpressionNode
+
+	if parser.currentToken().Type == FIELD {
+		prefixNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.prefix = prefixNode
+
+		node.Token = parser.currentToken()
+
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+
+		suffixNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.suffix = suffixNode
+	} else {
+		node.Token = parser.currentToken()
+	}
+
+	precedence, ok := precedenceMap[node.Token.Type]
+	if !ok {
+		return nil, NewError(
+			InvalidTypeForExpressionPrecedence,
+			node.Token.LineNumber,
+			node.Token.Start,
+			node.Token.Text,
+			)
+	}
+
+	node.precedence = precedence
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+func prattParse(parser *Parser, basePrecedence int) (*ExpressionNode, error) {
+	left, err := newExpressionNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		operator := parser.peakToken()
+		if operator.Type == EOF {
+			break
+		}
+
+		operatorPrecedence, ok := precedenceMap[operator.Type]
+		if !ok {
+			return nil, NewError(
+				InvalidTypeForExpressionPrecedence,
+				operator.LineNumber,
+				operator.Start,
+				operator.Text,
+				)
+		}
+
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+		right, err := prattParse(parser, operatorPrecedence)
+		if err != nil {
+			return nil, err
+		}
+
+		node := ExpressionNode{
+			precedence: operatorPrecedence,
+			prefix: left,
+			suffix: right,
+		}
+		node.Token = operator
+
+		left = &node
+	}
+
+	return left, nil
+}
 
 // expressions can't hold the table node
 func (e *ExpressionNode) Table() Node {
@@ -89,6 +180,31 @@ func (e *ExpressionNode) String() string {
 	return buf.String()
 }
 
+type OperatorNode struct {
+	prefix,
+	infix,
+	suffix			Node
+	precedence	int
+}
+
+var _ Node = (*OperatorNode)(nil)
+
+func newOperatorNode() (*OperatorNode, error) {
+	return &OperatorNode{}, nil
+}
+
+func (o *OperatorNode) Table() Node {
+	return nil
+}
+
+func (o *OperatorNode) Columns() []Node {
+	return nil
+}
+
+func (o *OperatorNode) String() string {
+	return ""
+}
+
 type ListNode struct {
 	nodes []Node
 }
@@ -103,7 +219,7 @@ func newListNode(parser *Parser) (*ListNode, error) {
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
 			"(",
-		)
+			)
 	}
 
 	// consume l paran
@@ -171,7 +287,7 @@ type InsertNode struct {
 
 var _ Node = (*InsertNode)(nil)
 
-func newInsetNode(parser *Parser) (Node, error) {
+func newInsetNode(parser *Parser) (*InsertNode, error) {
 	var node InsertNode
 	node.Token =  parser.currentToken()
 
@@ -185,7 +301,7 @@ func newInsetNode(parser *Parser) (Node, error) {
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
 			"INTO",
-		)
+			)
 	}
 
 	// consume into token
@@ -213,7 +329,7 @@ func newInsetNode(parser *Parser) (Node, error) {
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
 			"VALUES",
-		)
+			)
 	}
 
 	// consume values tokes
@@ -228,16 +344,7 @@ func newInsetNode(parser *Parser) (Node, error) {
 
 	node.values = values
 
-	if parser.currentToken().Type != SEMICOL {
-		return nil, NewError(
-			InvalidInsertStatement,
-			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			";",
-		)
-	}
-
-	if err := parser.nextToken(); err != nil {
+	if err := consumeEndChar(parser); err != nil {
 		return nil, err
 	}
 
@@ -272,9 +379,68 @@ type SelectNode struct {
 	baseNode
 	columns []Node
 	from    Node
+	where		Node
 }
 
 var _ Node = (*SelectNode)(nil)
+
+func newSelectNode(parser *Parser) (*SelectNode, error) {
+	var node SelectNode
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	for {
+		if parser.currentToken().Type != FIELD {
+			break
+		}
+
+		column, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.columns = append(node.columns, column)
+	}
+
+	if parser.currentToken().Type != FROM {
+		return nil, NewError(
+			InvalidInsertStatement,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			"FROM",
+			)
+	}
+
+	// consume from tokes
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	from, err := newFieldNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	node.from = from
+
+	if parser.currentToken().Type == WHERE {
+		where, err := newExpressionNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.where = where
+	}
+
+	if err := consumeEndChar(parser); err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
 
 func (s *SelectNode) Table() Node {
 	return s.from
@@ -286,4 +452,22 @@ func (s *SelectNode) Columns() []Node {
 
 func (s* SelectNode) String() string {
 	return ""
+}
+
+func consumeEndChar(parser *Parser) error {
+	if parser.currentToken().Type != SEMICOL {
+		return NewError(
+			InvalidInsertStatement,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			";",
+			)
+	}
+
+	// consume semicol token
+	if err := parser.nextToken(); err != nil {
+		return err
+	}
+
+	return nil
 }
