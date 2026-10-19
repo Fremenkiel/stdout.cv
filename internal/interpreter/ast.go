@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"bytes"
+	"fmt"
 )
 
 type Node interface {
@@ -21,9 +22,7 @@ type FieldNode struct {
 var _ Node = (*FieldNode)(nil)
 
 func newFieldNode(parser *Parser) (*FieldNode, error) {
-	if parser.currentToken().Type != FIELD &&
-	parser.currentToken().Type != STRING &&
-	parser.currentToken().Type != NUMBER {
+	if !parser.currentToken().isField() {
 		return nil, NewError(
 			InvalidField,
 			parser.currentToken().LineNumber,
@@ -72,28 +71,10 @@ var _ Node = (*ExpressionNode)(nil)
 func newExpressionNode(parser *Parser) (*ExpressionNode, error) {
 	var node ExpressionNode
 
-	if parser.currentToken().Type == FIELD {
-		prefixNode, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
-		}
+	node.Token = parser.currentToken()
 
-		node.prefix = prefixNode
-
-		node.Token = parser.currentToken()
-
-		if err := parser.nextToken(); err != nil {
-			return nil, err
-		}
-
-		suffixNode, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
-		}
-
-		node.suffix = suffixNode
-	} else {
-		node.Token = parser.currentToken()
+	if err := parser.nextToken(); err != nil {
+		return nil, err
 	}
 
 	precedence, ok := precedenceMap[node.Token.Type]
@@ -108,54 +89,7 @@ func newExpressionNode(parser *Parser) (*ExpressionNode, error) {
 
 	node.precedence = precedence
 
-	if err := parser.nextToken(); err != nil {
-		return nil, err
-	}
-
 	return &node, nil
-}
-
-func prattParse(parser *Parser, basePrecedence int) (*ExpressionNode, error) {
-	left, err := newExpressionNode(parser)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		operator := parser.peakToken()
-		if operator.Type == EOF {
-			break
-		}
-
-		operatorPrecedence, ok := precedenceMap[operator.Type]
-		if !ok {
-			return nil, NewError(
-				InvalidTypeForExpressionPrecedence,
-				operator.LineNumber,
-				operator.Start,
-				operator.Text,
-				)
-		}
-
-		if err := parser.nextToken(); err != nil {
-			return nil, err
-		}
-		right, err := prattParse(parser, operatorPrecedence)
-		if err != nil {
-			return nil, err
-		}
-
-		node := ExpressionNode{
-			precedence: operatorPrecedence,
-			prefix: left,
-			suffix: right,
-		}
-		node.Token = operator
-
-		left = &node
-	}
-
-	return left, nil
 }
 
 // expressions can't hold the table node
@@ -171,26 +105,93 @@ func (e *ExpressionNode) Columns() []Node {
 func (e *ExpressionNode) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteString(e.prefix.String())
-	buf.WriteString(" ")
+	if prefix := e.prefix; prefix != nil {
+		if str := prefix.String(); len(str) > 0 {
+			buf.WriteString(str)
+			buf.WriteString(" ")
+		}
+	}
+
 	buf.WriteString(e.Token.Text)
-	buf.WriteString(" ")
-	buf.WriteString(e.suffix.String())
+
+
+	if suffix := e.suffix; suffix != nil {
+		if str := suffix.String(); len(str) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(str)
+		}
+	}
 
 	return buf.String()
 }
 
 type OperatorNode struct {
+	infix				[]baseNode
 	prefix,
-	infix,
 	suffix			Node
 	precedence	int
 }
 
 var _ Node = (*OperatorNode)(nil)
 
-func newOperatorNode() (*OperatorNode, error) {
-	return &OperatorNode{}, nil
+func newOperatorNode(parser *Parser) (*OperatorNode, error) {
+	var node OperatorNode
+	node.precedence = 0
+
+	if parser.currentToken().isField() {
+		prefixNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.prefix = prefixNode
+	}
+
+	for {
+		if parser.currentToken().Type == EOF {
+			return &node, nil
+		}
+
+		if parser.currentToken().isField() {
+			break
+		}
+
+		infix := baseNode{
+			Token: parser.currentToken(),
+		}
+
+		node.infix = append(node.infix, infix)
+
+		precedence, ok := precedenceMap[infix.Token.Type]
+		if !ok {
+			return nil, NewError(
+				InvalidTypeForExpressionPrecedence,
+				infix.Token.LineNumber,
+				infix.Token.Start,
+				infix.Token.Text,
+				)
+		}
+
+		if precedence > node.precedence {
+			node.precedence = precedence
+		}
+
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+	}
+
+	// suffix is only relevant if prefix is also set
+	if node.prefix != nil {
+		suffixNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.suffix = suffixNode
+	}
+
+	return &node, nil
 }
 
 func (o *OperatorNode) Table() Node {
@@ -202,7 +203,31 @@ func (o *OperatorNode) Columns() []Node {
 }
 
 func (o *OperatorNode) String() string {
-	return ""
+	var buf bytes.Buffer
+
+	if prefix := o.prefix; prefix != nil {
+		if str := prefix.String(); len(str) > 0 {
+			buf.WriteString(str)
+			buf.WriteString(" ")
+		}
+	}
+
+	for i := range o.infix {
+		buf.WriteString(o.infix[i].Token.Text)
+
+		if i < len(o.infix) - 1 {
+			buf.WriteString(" ")
+		}
+	}
+
+	if suffix := o.suffix; suffix != nil {
+		if str := suffix.String(); len(str) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(str)
+		}
+	}
+
+	return buf.String()
 }
 
 type ListNode struct {
@@ -215,7 +240,7 @@ func newListNode(parser *Parser) (*ListNode, error) {
 	var list ListNode
 	if parser.currentToken().Type != L_PARAN {
 		return nil, NewError(
-			InvalidInsertStatement,
+			InvalidListFormat,
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
 			"(",
@@ -287,7 +312,16 @@ type InsertNode struct {
 
 var _ Node = (*InsertNode)(nil)
 
-func newInsetNode(parser *Parser) (*InsertNode, error) {
+func newInsetNode(parser *Parser) (Node, error) {
+	if parser.currentToken().Type != INSERT {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", INSERT, parser.currentToken().Type),
+			)
+	}
+
 	var node InsertNode
 	node.Token =  parser.currentToken()
 
@@ -300,7 +334,7 @@ func newInsetNode(parser *Parser) (*InsertNode, error) {
 			InvalidInsertStatement,
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
-			"INTO",
+			string(INTO),
 			)
 	}
 
@@ -328,7 +362,7 @@ func newInsetNode(parser *Parser) (*InsertNode, error) {
 			InvalidInsertStatement,
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
-			"VALUES",
+			string(VALUES),
 			)
 	}
 
@@ -384,7 +418,16 @@ type SelectNode struct {
 
 var _ Node = (*SelectNode)(nil)
 
-func newSelectNode(parser *Parser) (*SelectNode, error) {
+func newSelectNode(parser *Parser) (Node, error) {
+	if parser.currentToken().Type != SELECT {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", SELECT, parser.currentToken().Type),
+			)
+	}
+
 	var node SelectNode
 	node.Token = parser.currentToken()
 
@@ -407,10 +450,10 @@ func newSelectNode(parser *Parser) (*SelectNode, error) {
 
 	if parser.currentToken().Type != FROM {
 		return nil, NewError(
-			InvalidInsertStatement,
+			InvalidSelectStatement,
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
-			"FROM",
+			string(FROM),
 			)
 	}
 
@@ -427,7 +470,7 @@ func newSelectNode(parser *Parser) (*SelectNode, error) {
 	node.from = from
 
 	if parser.currentToken().Type == WHERE {
-		where, err := newExpressionNode(parser)
+		where, err := newWhereNode(parser)
 		if err != nil {
 			return nil, err
 		}
@@ -450,14 +493,301 @@ func (s *SelectNode) Columns() []Node {
 	return s.columns
 }
 
-func (s* SelectNode) String() string {
-	return ""
+func (s *SelectNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString("SELECT ")
+
+	for i := range s.columns {
+		buf.WriteString(s.columns[i].String())
+
+		if i < len(s.columns) - 1 {
+			buf.WriteString(", ")
+		}
+	}
+
+	buf.WriteString(" ")
+	buf.WriteString("FROM ")
+	buf.WriteString(s.from.String())
+
+	if s.where != nil {
+		buf.WriteString(" ")
+		buf.WriteString(s.where.String())
+	}
+
+	buf.WriteString(";")
+
+	return buf.String()
+}
+
+// UPDATE
+type UpdateNode struct {
+	baseNode
+	table				Node
+	set					Node
+	where				Node
+}
+
+var _ Node = (*UpdateNode)(nil)
+
+func newUpdateNode(parser *Parser) (Node, error) {
+	if parser.currentToken().Type != UPDATE {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", UPDATE, parser.currentToken().Type),
+			)
+	}
+
+	var node UpdateNode
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	if parser.currentToken().Type != FIELD {
+		return nil, NewError(
+			InvalidUpdateStatement,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			"table",
+			)
+	}
+
+	table, err := newFieldNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	node.table = table
+
+	if parser.currentToken().Type != SET {
+		return nil, NewError(
+			InvalidUpdateStatement,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			string(SET),
+			)
+	}
+
+	// consume set tokes
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	set, err := parser.expressionParse(0)
+	if err != nil {
+		return nil, err
+	}
+
+	node.set = set
+
+	if parser.currentToken().Type == WHERE {
+		where, err := newWhereNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.where = where
+	}
+
+	if err := consumeEndChar(parser); err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+func (u *UpdateNode) Table() Node {
+	return u.table
+}
+
+// update do not return data for our use
+func (u *UpdateNode) Columns() []Node {
+	return nil
+}
+
+func (u *UpdateNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString("UPDATE ")
+	buf.WriteString(u.table.String())
+	buf.WriteString(" SET ")
+
+	buf.WriteString(u.set.String())
+
+	if u.where != nil {
+		buf.WriteString(" ")
+		buf.WriteString(u.where.String())
+	}
+
+	buf.WriteString(";")
+
+	return buf.String()
+}
+
+// DELETE
+type DeleteNode struct {
+	baseNode
+	from    Node
+	where		Node
+}
+
+var _ Node = (*DeleteNode)(nil)
+
+func newDeleteNode(parser *Parser) (Node, error) {
+	if parser.currentToken().Type != DELETE {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", DELETE, parser.currentToken().Type),
+			)
+	}
+
+	var node DeleteNode
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	if parser.currentToken().Type != FROM {
+		return nil, NewError(
+			InvalidDeleteStatement,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			string(FROM),
+			)
+	}
+
+	// consume from tokes
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	from, err := newFieldNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	node.from = from
+
+	if parser.currentToken().Type == WHERE {
+		where, err := newWhereNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.where = where
+	}
+
+	if err := consumeEndChar(parser); err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+func (d *DeleteNode) Table() Node {
+	return d.from
+}
+
+func (d *DeleteNode) Columns() []Node {
+	return nil
+}
+
+func (d *DeleteNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString("DELETE FROM ")
+	buf.WriteString(d.from.String())
+
+	if d.where != nil {
+		buf.WriteString(" ")
+		buf.WriteString(d.where.String())
+	}
+
+	buf.WriteString(";")
+
+	return buf.String()
+}
+
+// WHERE
+type WhereNode struct {
+	baseNode
+	prefix			Node
+	expression	Node
+}
+
+var _ Node = (*WhereNode)(nil)
+
+// do not consume end char as where can't be a stand alone statement
+func newWhereNode(parser *Parser) (Node, error) {
+	if parser.currentToken().Type != WHERE {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", WHERE, parser.currentToken().Type),
+			)
+	}
+
+	var node WhereNode
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	if !parser.currentToken().isField() {
+		prefix, err := newOperatorNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.prefix = prefix
+	}
+	
+	expression, err := parser.expressionParse(0)
+	if err != nil {
+		return nil, err
+	}
+
+	node.expression = expression
+
+	return &node, nil
+}
+
+func (w *WhereNode) Table() Node {
+	return nil
+}
+
+func (w *WhereNode) Columns() []Node {
+	return nil
+}
+
+func (w *WhereNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString("WHERE ")
+
+	if w.prefix != nil {
+		buf.WriteString(w.prefix.String())
+		buf.WriteString(" ")
+	}
+	
+	buf.WriteString(w.expression.String())
+
+	return buf.String()
 }
 
 func consumeEndChar(parser *Parser) error {
 	if parser.currentToken().Type != SEMICOL {
 		return NewError(
-			InvalidInsertStatement,
+			InvalidEndOfStatement,
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
 			";",

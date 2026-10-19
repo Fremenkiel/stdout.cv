@@ -39,11 +39,19 @@ var (
 	ErrorCodeString = map[ErrorCode]string{
 		NoQuery: "No query given",
 
-		InvalidString: "String is not correctly closed, add termination to",
-		InvalidQuery: "Query is invalid formatted",
 		InvalidInsertStatement: "Invalid INSERT statement, add",
+		InvalidSelectStatement: "Invalid SELECT statement, add",
+		InvalidUpdateStatement: "Invalid UPDATE statement, add",
+		InvalidDeleteStatement: "Invalid DELETE statement, add",
+
+		InvalidString: "String is not correctly closed, add termination to",
+		InvalidListFormat: "Invalid list format, add",
+		InvalidQuery: "Query is invalid formatted",
 		InvalidField: "Unexpected token type when trying to parse field, got",
 		InvalidTypeForExpressionPrecedence: "Invalid token type for expression, precedence not set for",
+		InvalidExpressionType: "Invalid type for parsing expression",
+		InvalidEndOfStatement: "Invalid end of statement, add",
+		InvalidBaseNodeType: "Invalid base node type",
 
 		UnexpectedEOF: "Unexpected end of file after",
 		UnknownBaseNodeType: "Unknown base node type recived, this might be a resulte of a falty query before the current",
@@ -55,11 +63,19 @@ type ErrorCode int
 const (
 	NoQuery ErrorCode = iota
 
-	InvalidString
-	InvalidQuery
 	InvalidInsertStatement
+	InvalidSelectStatement
+	InvalidUpdateStatement
+	InvalidDeleteStatement
+
+	InvalidString
+	InvalidListFormat
+	InvalidQuery
 	InvalidField
 	InvalidTypeForExpressionPrecedence
+	InvalidExpressionType
+	InvalidEndOfStatement
+	InvalidBaseNodeType
 
 	UnexpectedEOF
 	UnknownBaseNodeType

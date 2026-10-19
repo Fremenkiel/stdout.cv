@@ -66,6 +66,23 @@ func NewToken(t TokenType, text string, lexer *Lexer) Token {
 	}
 }
 
+func (t Token) isField() bool {
+	switch t.Type {
+	case FIELD:
+		return true
+	case STRING:
+		return true
+	case NUMBER:
+		return true
+	case FUNC:
+		return true
+	case NULL:
+		return true
+	}
+
+	return false
+}
+
 type TokenType string
 
 const (
@@ -88,6 +105,7 @@ const (
 	NOT				TokenType = "NOT"										// NOT operator
 	LIKE			TokenType = "LIKE"									// LIKE operator
 	AS				TokenType = "AS"										// AS operator
+	IN				TokenType = "IN"										// IN operator
 
 	// Delimitor
 	SEMICOL		TokenType = "SEMICOL"								// ;
@@ -112,4 +130,40 @@ const (
 )
 
 var precedenceMap = map[TokenType]int{
+	EOF: -1,
+	SEMICOL: -1,
+
+	INSERT: -1,
+	SELECT: -1,
+	UPDATE: -1,
+	DELETE: -1,
+
+	INTO: -1,
+	FROM: -1,
+	WHERE: -1,
+	VALUES: -1,
+	SET: -1,
+
+	FIELD: 0,
+	STRING: 0,
+	NUMBER: 0,
+	NULL: 0,
+
+	EQUAL: 1,
+	L_THAN: 1,
+	G_THAN: 1,
+	N_EQUAL: 1,
+	LT_EQUAL: 1,
+	GT_EQUAL: 1,
+	IS: 1,
+	NOT: 1,
+	LIKE: 1,
+	IN: 1,
+
+	AND: 2,
+
+	OR: 3,
+
+	L_PARAN: 4,
+	R_PARAN: 4,
 }

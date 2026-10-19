@@ -13,15 +13,20 @@ func NewParser() *Parser {
 	parser := &Parser{
 		lexer: NewLexer(),
 		handlers: map[TokenType]func(*Parser) (Node, error) {
-			INSERT: newInsetNode,
-			// SELECT: newSelectNode,
+			INSERT:	newInsetNode,
+			SELECT:	newSelectNode,
+			UPDATE: newUpdateNode,
+			DELETE:	newDeleteNode,
 		},
+		r: -1,
 	}
 	return parser
 }
 
 func (p *Parser) ParseQuery(query string) error {
 	p.lexer.Write(query)
+	p.r = 0
+
 	for {
 		t, err := p.lexer.Next()
 		if err != nil {
@@ -59,6 +64,59 @@ func (p *Parser) ParseQuery(query string) error {
 	}
 
 	return nil
+}
+
+func (p *Parser) expressionParse(basePrecedence int) (Node, error) {
+	left, err := p.newParseNode()
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		operator := p.currentToken()
+
+		operatorPrecedence, ok := precedenceMap[operator.Type]
+		if !ok {
+			return nil, NewError(
+				InvalidTypeForExpressionPrecedence,
+				operator.LineNumber,
+				operator.Start,
+				operator.Text,
+				)
+		}
+
+		if operatorPrecedence < basePrecedence {
+			break
+		}
+
+		if err := p.nextToken(); err != nil {
+			return nil, err
+		}
+
+		right, err := p.expressionParse(operatorPrecedence)
+		if err != nil {
+			return nil, err
+		}
+
+		node := ExpressionNode{
+			precedence: operatorPrecedence,
+			prefix: left,
+			suffix: right,
+		}
+		node.Token = operator
+
+		left = &node
+	}
+
+	return left, nil
+}
+
+func (p *Parser) newParseNode() (Node, error) {
+	if p.currentToken().isField() {
+		return newOperatorNode(p)
+	}
+
+	return newExpressionNode(p)
 }
 
 func (p *Parser) currentToken() Token {

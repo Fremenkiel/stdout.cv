@@ -423,6 +423,21 @@ func TestParseQueryToString(t *testing.T) {
 			query: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
 			expectedError: nil,
 		},
+		{
+			name: "select",
+			query: "SELECT name, age FROM users WHERE name LIKE '%kev%' AND age < 30;",
+			expectedError: nil,
+		},
+		{
+			name: "update",
+			query: "UPDATE users SET age = 26 WHERE id = 1;",
+			expectedError: nil,
+		},
+		{
+			name: "delete",
+			query: "DELETE FROM users WHERE id = 1;",
+			expectedError: nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -443,6 +458,90 @@ func TestParseQueryToString(t *testing.T) {
 			response := parser.trees[0].String()
 			if test.query != response {
 				t.Fatalf("unexpected response, '%s' got '%s'", test.query, response)
+			}
+		})
+	}
+}
+
+func TestExpressionParse(t *testing.T) {
+	tests := []struct{
+		name							string
+		tokens						[]Token
+		expectedResponse	string
+	} {
+		{
+			name: "and",
+			tokens: []Token{
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "Kevin" },
+				{ Type: AND, Text: "AND" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: L_THAN, Text: "<" },
+				{ Type: NUMBER, Text: "30" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "name = 'Kevin' AND age < 30",
+		},
+		{
+			name: "and_or",
+			tokens: []Token{
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "Kevin" },
+				{ Type: AND, Text: "AND" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: L_THAN, Text: "<" },
+				{ Type: NUMBER, Text: "30" },
+				{ Type: OR, Text: "OR" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: L_THAN, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "name = 'Kevin' AND age < 30 OR id = 1",
+		},
+		{
+			name: "like",
+			tokens: []Token{
+				{ Type: FIELD, Text: "name" },
+				{ Type: LIKE, Text: "LIKE" },
+				{ Type: STRING, Text: "%Kev%" },
+				{ Type: AND, Text: "AND" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: L_THAN, Text: "<" },
+				{ Type: NUMBER, Text: "30" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "name LIKE '%Kev%' AND age < 30",
+		},
+		{
+			name: "is",
+			tokens: []Token{
+				{ Type: FIELD, Text: "age" },
+				{ Type: IS, Text: "IS" },
+				{ Type: NOT, Text: "NOT" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "age IS NOT NULL",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				tokens: test.tokens,
+				r: 0,
+			}
+
+			node, err := parser.expressionParse(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response := node.String()
+			if test.expectedResponse != response {
+				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, response)
 			}
 		})
 	}
