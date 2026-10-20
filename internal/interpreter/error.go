@@ -5,14 +5,7 @@ import (
 	"fmt"
 )
 
-var ErrQueryNotAllowed = errors.New("query: The received query is not allowed")
-var ErrMultipleWildcard = errors.New("query: More than one wildcard char was given")
-var ErrMultipleQueries = errors.New("query: More than one query was given")
-var ErrQueryEndMarkerMissing = errors.New("query: End marker for query is missing, add a semi-colon")
-var ErrNoQuery = errors.New("query: No query received")
-
 // Lexer
-var ErrInvalidString = errors.New("String is not correctly closed, add end to string")
 var ErrInvalidQuery = errors.New("Query is invalid formatted")
 
 
@@ -48,10 +41,11 @@ var (
 		InvalidListFormat: "Invalid list format, add",
 		InvalidQuery: "Query is invalid formatted",
 		InvalidField: "Unexpected token type when trying to parse field, got",
-		InvalidTypeForExpressionPrecedence: "Invalid token type for expression, precedence not set for",
+		InvalidTypeForPrecedence: "Invalid token type for expression, precedence not set for",
 		InvalidExpressionType: "Invalid type for parsing expression",
 		InvalidEndOfStatement: "Invalid end of statement, add",
 		InvalidBaseNodeType: "Invalid base node type",
+		InvalidCastType: "Invalid cast type at",
 
 		UnexpectedEOF: "Unexpected end of file after",
 		UnknownBaseNodeType: "Unknown base node type recived, this might be a resulte of a falty query before the current",
@@ -72,10 +66,11 @@ const (
 	InvalidListFormat
 	InvalidQuery
 	InvalidField
-	InvalidTypeForExpressionPrecedence
+	InvalidTypeForPrecedence
 	InvalidExpressionType
 	InvalidEndOfStatement
 	InvalidBaseNodeType
+	InvalidCastType
 
 	UnexpectedEOF
 	UnknownBaseNodeType

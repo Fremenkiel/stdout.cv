@@ -2,269 +2,269 @@ package interpreter
 
 import "testing"
 
-// func TestParseQuery(t *testing.T) {
-// 	tests := []struct{
-// 		name						string
-// 		query						string
-// 		expectedTokens	[]Token
-// 	} {
-// 		{
-// 			name: "insert",
-// 			query: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
-// 			expectedTokens: []Token{
-// 				{ Type: INSERT, Text: "INSERT" },
-// 				{ Type: INTO, Text: "INTO" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: L_PARAN, Text: "(" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FIELD, Text: "email" },
-// 				{ Type: R_PARAN, Text: ")" },
-// 				{ Type: VALUES, Text: "VALUES" },
-// 				{ Type: L_PARAN, Text: "(" },
-// 				{ Type: STRING, Text: "kevin" },
-// 				{ Type: STRING, Text: "test@gmail.dk" },
-// 				{ Type: R_PARAN, Text: ")" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "select",
-// 			query: "SELECT name, age, email FROM users WHERE id = 1 AND name LIKE '%kevin%';",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FIELD, Text: "age" },
-// 				{ Type: FIELD, Text: "email" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: AND, Text: "AND" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: LIKE, Text: "LIKE" },
-// 				{ Type: STRING, Text: "%kevin%" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "update",
-// 			query: "UPDATE users SET name = 'john' WHERE id = 1;",
-// 			expectedTokens: []Token{
-// 				{ Type: UPDATE, Text: "UPDATE" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: SET, Text: "SET" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: STRING, Text: "john" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "delete",
-// 			query: "DELETE FROM users WHERE id = 1 AND name LIKE '%kevin%';",
-// 			expectedTokens: []Token{
-// 				{ Type: DELETE, Text: "DELETE" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: AND, Text: "AND" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: LIKE, Text: "LIKE" },
-// 				{ Type: STRING, Text: "%kevin%" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "func",
-// 			query: "SELECT now();",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FUNC, Text: "now" },
-// 				{ Type: L_PARAN, Text: "(" },
-// 				{ Type: R_PARAN, Text: ")" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "is_not_null",
-// 			query: "SELECT name FROM users WHERE email IS NOT NULL;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "email" },
-// 				{ Type: IS, Text: "IS" },
-// 				{ Type: NOT, Text: "NOT" },
-// 				{ Type: NULL, Text: "NULL" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "l_than",
-// 			query: "SELECT name FROM users WHERE id < 2;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: L_THAN, Text: "<" },
-// 				{ Type: NUMBER, Text: "2" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "g_than",
-// 			query: "SELECT name FROM users WHERE id > 0;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: G_THAN, Text: ">" },
-// 				{ Type: NUMBER, Text: "0" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "lt_equal",
-// 			query: "SELECT name FROM users WHERE id <= 1;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: LT_EQUAL, Text: "<=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "gt_equal",
-// 			query: "SELECT name FROM users WHERE id >= 1;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: GT_EQUAL, Text: ">=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "n_equal",
-// 			query: "SELECT name FROM users WHERE id != 1;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: N_EQUAL, Text: "!=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "and_or",
-// 			query: "SELECT name FROM users WHERE id = 1 AND (name = 'kevin' OR email = 'test@gmail.dk');",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: AND, Text: "AND" },
-// 				{ Type: L_PARAN, Text: "(" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: STRING, Text: "kevin" },
-// 				{ Type: OR, Text: "OR" },
-// 				{ Type: FIELD, Text: "email" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: STRING, Text: "test@gmail.dk" },
-// 				{ Type: R_PARAN, Text: ")" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 		{
-// 			name: "as",
-// 			query: "SELECT name AS result FROM users WHERE id = 1;",
-// 			expectedTokens: []Token{
-// 				{ Type: SELECT, Text: "SELECT" },
-// 				{ Type: FIELD, Text: "name" },
-// 				{ Type: AS, Text: "AS" },
-// 				{ Type: FIELD, Text: "result" },
-// 				{ Type: FROM, Text: "FROM" },
-// 				{ Type: FIELD, Text: "users" },
-// 				{ Type: WHERE, Text: "WHERE" },
-// 				{ Type: FIELD, Text: "id" },
-// 				{ Type: EQUAL, Text: "=" },
-// 				{ Type: NUMBER, Text: "1" },
-// 				{ Type: SEMICOL, Text: ";" },
-// 				{ Type: EOF, Text: "" },
-// 			},
-// 		},
-// 	}
-// 	for _, test := range tests {
-// 		t.Run(test.name, func(t *testing.T) {
-// 			parser := NewParser()
-//
-// 			if err := parser.ParseQuery(test.query); err != nil {
-// 				t.Fatal(err)
-// 			}
-//
-// 			if len(test.expectedTokens) != len(parser.tokens) {
-// 				t.Fatalf("unexpected len, %v got %v", len(test.expectedTokens), len(parser.tokens))
-// 			}
-//
-// 			for i := range parser.tokens {
-// 				if test.expectedTokens[i].Type != parser.tokens[i].Type {
-// 					t.Fatalf("unexpected token type at %v, %v (%s) got %v (%s)", i, test.expectedTokens[i].Type, test.expectedTokens[i].Text, parser.tokens[i].Type, parser.tokens[i].Text)
-// 				}
-//
-// 				if test.expectedTokens[i].Text != parser.tokens[i].Text {
-// 					t.Fatalf("unexpected token text at %v, %s got %s", i, test.expectedTokens[i].Text, parser.tokens[i].Text)
-// 				}
-// 			}
-// 		})
-// 	}
-// }
+func TestParseQuery(t *testing.T) {
+	tests := []struct{
+		name						string
+		query						string
+		expectedTokens	[]Token
+	} {
+		{
+			name: "insert",
+			query: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
+			expectedTokens: []Token{
+				{ Type: INSERT, Text: "INSERT" },
+				{ Type: INTO, Text: "INTO" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "email" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: VALUES, Text: "VALUES" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: STRING, Text: "test@gmail.dk" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "select",
+			query: "SELECT name, age, email FROM users WHERE id = 1 AND name LIKE '%kevin%';",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: FIELD, Text: "email" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: AND, Text: "AND" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: LIKE, Text: "LIKE" },
+				{ Type: STRING, Text: "%kevin%" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "update",
+			query: "UPDATE users SET name = 'john' WHERE id = 1;",
+			expectedTokens: []Token{
+				{ Type: UPDATE, Text: "UPDATE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SET, Text: "SET" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "john" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "delete",
+			query: "DELETE FROM users WHERE id = 1 AND name LIKE '%kevin%';",
+			expectedTokens: []Token{
+				{ Type: DELETE, Text: "DELETE" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: AND, Text: "AND" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: LIKE, Text: "LIKE" },
+				{ Type: STRING, Text: "%kevin%" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "func",
+			query: "SELECT now();",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FUNC, Text: "now" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "is_not_null",
+			query: "SELECT name FROM users WHERE email IS NOT NULL;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "email" },
+				{ Type: IS, Text: "IS" },
+				{ Type: NOT, Text: "NOT" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "l_than",
+			query: "SELECT name FROM users WHERE id < 2;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: L_THAN, Text: "<" },
+				{ Type: NUMBER, Text: "2" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "g_than",
+			query: "SELECT name FROM users WHERE id > 0;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: G_THAN, Text: ">" },
+				{ Type: NUMBER, Text: "0" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "lt_equal",
+			query: "SELECT name FROM users WHERE id <= 1;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: LT_EQUAL, Text: "<=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "gt_equal",
+			query: "SELECT name FROM users WHERE id >= 1;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: GT_EQUAL, Text: ">=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "n_equal",
+			query: "SELECT name FROM users WHERE id != 1;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: N_EQUAL, Text: "!=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "and_or",
+			query: "SELECT name FROM users WHERE id = 1 AND (name = 'kevin' OR email = 'test@gmail.dk');",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: AND, Text: "AND" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: OR, Text: "OR" },
+				{ Type: FIELD, Text: "email" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "test@gmail.dk" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+		{
+			name: "as",
+			query: "SELECT name AS result FROM users WHERE id = 1;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: AS, Text: "AS" },
+				{ Type: FIELD, Text: "result" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := NewParser()
+
+			if err := parser.ParseQuery(test.query); err != nil {
+				t.Fatal(err)
+			}
+
+			if len(test.expectedTokens) != len(parser.tokens) {
+				t.Fatalf("unexpected len, %v got %v", len(test.expectedTokens), len(parser.tokens))
+			}
+
+			for i := range parser.tokens {
+				if test.expectedTokens[i].Type != parser.tokens[i].Type {
+					t.Fatalf("unexpected token type at %v, %v (%s) got %v (%s)", i, test.expectedTokens[i].Type, test.expectedTokens[i].Text, parser.tokens[i].Type, parser.tokens[i].Text)
+				}
+
+				if test.expectedTokens[i].Text != parser.tokens[i].Text {
+					t.Fatalf("unexpected token text at %v, %s got %s", i, test.expectedTokens[i].Text, parser.tokens[i].Text)
+				}
+			}
+		})
+	}
+}
 //
 // func TestParseQueryTokenStats(t *testing.T) {
 // 	tests := []struct{
@@ -546,3 +546,4 @@ func TestExpressionParse(t *testing.T) {
 		})
 	}
 }
+

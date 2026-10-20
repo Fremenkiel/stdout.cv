@@ -78,7 +78,7 @@ func (p *Parser) expressionParse(basePrecedence int) (Node, error) {
 		operatorPrecedence, ok := precedenceMap[operator.Type]
 		if !ok {
 			return nil, NewError(
-				InvalidTypeForExpressionPrecedence,
+				InvalidTypeForPrecedence,
 				operator.LineNumber,
 				operator.Start,
 				operator.Text,

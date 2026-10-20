@@ -2,6 +2,8 @@ package interpreter
 
 import (
 	"io"
+	"strconv"
+	"strings"
 )
 
 type Lexer struct {
@@ -75,7 +77,7 @@ func (l *Lexer) Next() (Token, error) {
 			continue
 		}
 
-		if l.isNumber(c) {
+		if l.isInt(c) {
 			return l.nextNumber(c)
 		}
 
@@ -116,18 +118,14 @@ func (l *Lexer) Next() (Token, error) {
 	}
 }
 
-func (l *Lexer) addLineCount() {
-	l.currentChar = 0
-	l.currentLine = l.currentLine + 1
-}
-
 func (l *Lexer) nextNumber(char byte) (Token, error) {
 	var num = []byte{char}
 
+	var isFloat bool
 	var p byte
 	for {
 		p = l.peakByte()
-		if !l.isInt(p) {
+		if l.isSeperatorChar(p) {
 			break
 		}
 
@@ -135,10 +133,32 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 		if err != nil {
 			break
 		}
+
+		if !l.isNumber(b) {
+			return Token{}, ErrInvalidQuery
+		}
+
+		if b == '.' {
+			isFloat = true
+		}
+
 		num = append(num, b)
 	}
 
-	return NewToken(NUMBER, string(num), l), nil
+	str := string(num)
+
+	switch isFloat {
+	case false:
+		if _, err := strconv.ParseInt(str, 0, 0); err != nil {
+			return Token{}, ErrInvalidQuery
+		}
+	case true:
+		if _, err := strconv.ParseFloat(str, 64); err != nil {
+			return Token{}, ErrInvalidQuery
+		}
+	}
+
+	return NewToken(NUMBER, str, l), nil
 }
 
 func (l *Lexer) nextString() (Token, error) {
@@ -167,7 +187,7 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 	for {
 		p = l.peakByte()
 
-		if l.isWhiteSpaceOrSeperatorChar(p) {
+		if l.isSeperatorChar(p) {
 			break
 		}
 
@@ -188,12 +208,8 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 			break outerloop
 		}
 
-		if l.isEndChar(p) {
-			break
-		}
-
 		if l.isStringMarker(p) {
-			break
+			return Token{}, ErrInvalidQuery
 		}
 
 		b, err := l.readByte()
@@ -204,7 +220,7 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 	}
 
 	keyword := string(kw)
-	switch keyword {
+	switch strings.ToUpper(keyword) {
 	case string(AND):
 		return NewToken(AND, keyword, l), nil
 	case string(OR):
@@ -258,6 +274,10 @@ func (l *Lexer) isComment(c byte) bool {
 	return true
 }
 
+func (l *Lexer) isSeperatorChar(c byte) bool {
+	return l.isWhiteSpaceOrSeperatorChar(c) || l.isEndChar(c) || l.isLineBreak(c)
+}
+
 func (l *Lexer) isWhiteSpaceOrSeperatorChar(c byte) bool {
 	switch c {
 	case ' ':
@@ -270,22 +290,37 @@ func (l *Lexer) isWhiteSpaceOrSeperatorChar(c byte) bool {
 	return false
 }
 
+func (l *Lexer) isEndChar(c byte) bool {
+	return c == ';'
+}
+
+func (l *Lexer) isLineBreak(c byte) bool {
+	return  c == '\n'
+}
+
 func (l *Lexer) isInt(c byte) bool {
 	if c == '-' {
-		p := l.peakByte()
-		return p > 0 && p <= 9
+		return true
 	}
 
 	return l.isNumber(c)
 }
 
 func (l *Lexer) isNumber(c byte) bool {
+	if c == '.' {
+		return true
+	}
+
 	c -= '0'
 	if c > 9 {
 		return false
 	}
 
 	return true
+}
+
+func (l *Lexer) isStringMarker(c byte) bool {
+	return c == '\''
 }
 
 func (l *Lexer) readUntilEndOfString() ([]byte, error) {
@@ -305,18 +340,6 @@ func (l *Lexer) readUntilEndOfString() ([]byte, error) {
 	}
 }
 
-func (l *Lexer) isLineBreak(c byte) bool {
-	return  c == '\n'
-}
-
-func (l *Lexer) isEndChar(c byte) bool {
-	return c == ';'
-}
-
-func (l *Lexer) isStringMarker(c byte) bool {
-	return c == '\''
-}
-
 func (l *Lexer) skipUntilEOL() error {
 	for {
 		b, err := l.readByte()
@@ -328,6 +351,11 @@ func (l *Lexer) skipUntilEOL() error {
 			return nil
 		}
 	}
+}
+
+func (l *Lexer) addLineCount() {
+	l.currentChar = 0
+	l.currentLine = l.currentLine + 1
 }
 
 // resets peak to read index + 1

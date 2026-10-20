@@ -45,9 +45,8 @@ func (f *FieldNode) Table() Node {
 	return f
 }
 
-// is handled by the parent node
 func (f *FieldNode) Columns() []Node {
-	return nil
+	return []Node{f}
 }
 
 func (f *FieldNode) String() string {
@@ -80,7 +79,7 @@ func newExpressionNode(parser *Parser) (*ExpressionNode, error) {
 	precedence, ok := precedenceMap[node.Token.Type]
 	if !ok {
 		return nil, NewError(
-			InvalidTypeForExpressionPrecedence,
+			InvalidTypeForPrecedence,
 			node.Token.LineNumber,
 			node.Token.Start,
 			node.Token.Text,
@@ -165,7 +164,7 @@ func newOperatorNode(parser *Parser) (*OperatorNode, error) {
 		precedence, ok := precedenceMap[infix.Token.Type]
 		if !ok {
 			return nil, NewError(
-				InvalidTypeForExpressionPrecedence,
+				InvalidTypeForPrecedence,
 				infix.Token.LineNumber,
 				infix.Token.Start,
 				infix.Token.Text,
@@ -230,6 +229,70 @@ func (o *OperatorNode) String() string {
 	return buf.String()
 }
 
+type CastNode struct {
+	baseNode
+	prefix,
+	suffix		Node
+}
+
+var _ Node = (*CastNode)(nil)
+
+func newCastNode(parser *Parser) (*CastNode, error) {
+	var node CastNode
+
+	if parser.peakToken().Type != AS {
+		return nil, NewError(
+			InvalidCastType,
+			parser.peakToken().LineNumber,
+			parser.peakToken().Start,
+			parser.peakToken().Text,
+			)
+	}
+
+	prefix, err := newFieldNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	node.prefix = prefix
+
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+	
+	suffix, err := newFieldNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	node.suffix =suffix 
+
+	return &node, nil
+}
+
+func (c *CastNode) Columns() []Node {
+	return []Node{c.prefix}
+}
+
+func (c *CastNode) Table() Node {
+	return c.prefix
+}
+
+func (c *CastNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString(c.prefix.String())
+	buf.WriteString(" ")
+	buf.WriteString(c.Token.Text)
+	buf.WriteString(" ")
+	buf.WriteString(c.suffix.String())
+
+	return buf.String()
+}
+
+// list
 type ListNode struct {
 	nodes []Node
 }
@@ -436,25 +499,30 @@ func newSelectNode(parser *Parser) (Node, error) {
 	}
 
 	for {
+		var column Node
 		if parser.currentToken().Type != FIELD {
 			break
 		}
 
-		column, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
+		if parser.peakToken().Type == AS {
+			response, err := newCastNode(parser)
+			if err != nil {
+				return nil, err
+			}
+			column = response 
+		} else {
+			response, err := newFieldNode(parser)
+			if err != nil {
+				return nil, err
+			}
+			column = response 
 		}
 
 		node.columns = append(node.columns, column)
 	}
 
 	if parser.currentToken().Type != FROM {
-		return nil, NewError(
-			InvalidSelectStatement,
-			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			string(FROM),
-			)
+		return &node, nil
 	}
 
 	// consume from tokes
@@ -490,7 +558,13 @@ func (s *SelectNode) Table() Node {
 }
 
 func (s *SelectNode) Columns() []Node {
-	return s.columns
+	var columns []Node
+
+	for i := range s.columns {
+		columns = append(columns, s.columns[i].Columns()...)
+	}
+
+	return columns
 }
 
 func (s *SelectNode) String() string {
@@ -504,6 +578,10 @@ func (s *SelectNode) String() string {
 		if i < len(s.columns) - 1 {
 			buf.WriteString(", ")
 		}
+	}
+
+	if s.from == nil {
+		return buf.String()
 	}
 
 	buf.WriteString(" ")
