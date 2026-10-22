@@ -15,355 +15,6 @@ type baseNode struct {
 	Token Token
 }
 
-type FieldNode struct {
-	baseNode
-}
-
-var _ Node = (*FieldNode)(nil)
-
-func newFieldNode(parser *Parser) (*FieldNode, error) {
-	if !parser.currentToken().isField() {
-		return nil, NewError(
-			InvalidField,
-			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			parser.currentToken().Text,
-			)
-	}
-
-	var node FieldNode
-	node.Token = parser.currentToken()
-
-	if err := parser.nextToken(); err != nil {
-		return nil, err
-	}
-
-	return &node, nil
-}
-
-func (f *FieldNode) Table() Node {
-	return f
-}
-
-func (f *FieldNode) Columns() []Node {
-	return []Node{f}
-}
-
-func (f *FieldNode) String() string {
-	if f.Token.Type == STRING {
-		return "'" + f.Token.Text + "'"
-	}
-
-	return f.Token.Text
-}
-
-type ExpressionNode struct {
-	baseNode
-	precedence	int
-
-	prefix,
-	suffix 	Node
-}
-
-var _ Node = (*ExpressionNode)(nil)
-
-func newExpressionNode(parser *Parser) (*ExpressionNode, error) {
-	var node ExpressionNode
-
-	node.Token = parser.currentToken()
-
-	if err := parser.nextToken(); err != nil {
-		return nil, err
-	}
-
-	precedence, ok := precedenceMap[node.Token.Type]
-	if !ok {
-		return nil, NewError(
-			InvalidTypeForPrecedence,
-			node.Token.LineNumber,
-			node.Token.Start,
-			node.Token.Text,
-			)
-	}
-
-	node.precedence = precedence
-
-	return &node, nil
-}
-
-// expressions can't hold the table node
-func (e *ExpressionNode) Table() Node {
-	return nil
-}
-
-// expressions can't hold returned columns
-func (e *ExpressionNode) Columns() []Node {
-	return nil
-}
-
-func (e *ExpressionNode) String() string {
-	var buf bytes.Buffer
-
-	if prefix := e.prefix; prefix != nil {
-		if str := prefix.String(); len(str) > 0 {
-			buf.WriteString(str)
-			buf.WriteString(" ")
-		}
-	}
-
-	buf.WriteString(e.Token.Text)
-
-
-	if suffix := e.suffix; suffix != nil {
-		if str := suffix.String(); len(str) > 0 {
-			buf.WriteString(" ")
-			buf.WriteString(str)
-		}
-	}
-
-	return buf.String()
-}
-
-type OperatorNode struct {
-	infix				[]baseNode
-	prefix,
-	suffix			Node
-	precedence	int
-}
-
-var _ Node = (*OperatorNode)(nil)
-
-func newOperatorNode(parser *Parser) (*OperatorNode, error) {
-	var node OperatorNode
-	node.precedence = 0
-
-	if parser.currentToken().isField() {
-		prefixNode, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
-		}
-
-		node.prefix = prefixNode
-	}
-
-	for {
-		if parser.currentToken().Type == EOF {
-			return &node, nil
-		}
-
-		if parser.currentToken().isField() {
-			break
-		}
-
-		infix := baseNode{
-			Token: parser.currentToken(),
-		}
-
-		node.infix = append(node.infix, infix)
-
-		precedence, ok := precedenceMap[infix.Token.Type]
-		if !ok {
-			return nil, NewError(
-				InvalidTypeForPrecedence,
-				infix.Token.LineNumber,
-				infix.Token.Start,
-				infix.Token.Text,
-				)
-		}
-
-		if precedence > node.precedence {
-			node.precedence = precedence
-		}
-
-		if err := parser.nextToken(); err != nil {
-			return nil, err
-		}
-	}
-
-	// suffix is only relevant if prefix is also set
-	if node.prefix != nil {
-		suffixNode, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
-		}
-
-		node.suffix = suffixNode
-	}
-
-	return &node, nil
-}
-
-func (o *OperatorNode) Table() Node {
-	return nil
-}
-
-func (o *OperatorNode) Columns() []Node {
-	return nil
-}
-
-func (o *OperatorNode) String() string {
-	var buf bytes.Buffer
-
-	if prefix := o.prefix; prefix != nil {
-		if str := prefix.String(); len(str) > 0 {
-			buf.WriteString(str)
-			buf.WriteString(" ")
-		}
-	}
-
-	for i := range o.infix {
-		buf.WriteString(o.infix[i].Token.Text)
-
-		if i < len(o.infix) - 1 {
-			buf.WriteString(" ")
-		}
-	}
-
-	if suffix := o.suffix; suffix != nil {
-		if str := suffix.String(); len(str) > 0 {
-			buf.WriteString(" ")
-			buf.WriteString(str)
-		}
-	}
-
-	return buf.String()
-}
-
-type CastNode struct {
-	baseNode
-	prefix,
-	suffix		Node
-}
-
-var _ Node = (*CastNode)(nil)
-
-func newCastNode(parser *Parser) (*CastNode, error) {
-	var node CastNode
-
-	if parser.peakToken().Type != AS {
-		return nil, NewError(
-			InvalidCastType,
-			parser.peakToken().LineNumber,
-			parser.peakToken().Start,
-			parser.peakToken().Text,
-			)
-	}
-
-	prefix, err := newFieldNode(parser)
-	if err != nil {
-		return nil, err
-	}
-
-	node.prefix = prefix
-
-	node.Token = parser.currentToken()
-
-	if err := parser.nextToken(); err != nil {
-		return nil, err
-	}
-	
-	suffix, err := newFieldNode(parser)
-	if err != nil {
-		return nil, err
-	}
-
-	node.suffix =suffix 
-
-	return &node, nil
-}
-
-func (c *CastNode) Columns() []Node {
-	return []Node{c.prefix}
-}
-
-func (c *CastNode) Table() Node {
-	return c.prefix
-}
-
-func (c *CastNode) String() string {
-	var buf bytes.Buffer
-
-	buf.WriteString(c.prefix.String())
-	buf.WriteString(" ")
-	buf.WriteString(c.Token.Text)
-	buf.WriteString(" ")
-	buf.WriteString(c.suffix.String())
-
-	return buf.String()
-}
-
-// list
-type ListNode struct {
-	nodes []Node
-}
-
-var _ Node = (*ListNode)(nil)
-
-func newListNode(parser *Parser) (*ListNode, error) {
-	var list ListNode
-	if parser.currentToken().Type != L_PARAN {
-		return nil, NewError(
-			InvalidListFormat,
-			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			"(",
-			)
-	}
-
-	// consume l paran
-	if err := parser.nextToken(); err != nil {
-		return nil, err
-	}
-
-	for {
-		if parser.currentToken().Type == R_PARAN {
-			break
-		}
-
-		valueNode, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
-		}
-
-		list.nodes = append(list.nodes, valueNode)
-	}
-
-	// consume r paran
-	if err := parser.nextToken(); err != nil {
-		return nil, err
-	}
-
-	return &list, nil
-}
-
-// list can't hold the table node
-func (l *ListNode) Table() Node {
-	return nil
-}
-
-func (l *ListNode) Columns() []Node {
-	return l.nodes
-}
-
-func (l *ListNode) String() string {
-	var buf bytes.Buffer
-
-	buf.WriteString("(")
-
-	for i := range l.nodes {
-		buf.WriteString(l.nodes[i].String())
-
-		if i < len(l.nodes) - 1 {
-			buf.WriteString(", ")
-		}
-	}
-
-	buf.WriteString(")")
-
-	return buf.String()
-}
-
-
 // INSERT
 type InsertNode struct {
 	baseNode
@@ -500,28 +151,23 @@ func newSelectNode(parser *Parser) (Node, error) {
 
 	for {
 		var column Node
-		if parser.currentToken().Type != FIELD {
+		if !parser.currentToken().isField() {
 			break
 		}
 
-		if parser.peakToken().Type == AS {
-			response, err := newCastNode(parser)
-			if err != nil {
-				return nil, err
-			}
-			column = response 
-		} else {
-			response, err := newFieldNode(parser)
-			if err != nil {
-				return nil, err
-			}
-			column = response 
+		fieldNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
 		}
+		column = fieldNode 
 
 		node.columns = append(node.columns, column)
 	}
 
 	if parser.currentToken().Type != FROM {
+		if err := consumeEndChar(parser); err != nil {
+			return nil, err
+		}
 		return &node, nil
 	}
 
@@ -554,7 +200,11 @@ func newSelectNode(parser *Parser) (Node, error) {
 }
 
 func (s *SelectNode) Table() Node {
-	return s.from
+	if table := s.from; table != nil {
+		return table.Table()
+	}
+
+	return nil
 }
 
 func (s *SelectNode) Columns() []Node {
@@ -581,6 +231,7 @@ func (s *SelectNode) String() string {
 	}
 
 	if s.from == nil {
+		buf.WriteString(";")
 		return buf.String()
 	}
 
@@ -792,6 +443,494 @@ func (d *DeleteNode) String() string {
 
 	return buf.String()
 }
+
+type FieldNode struct {
+	baseNode
+}
+
+var _ Node = (*FieldNode)(nil)
+
+func newFieldNode(parser *Parser) (Node, error) {
+	if !parser.currentToken().isField() {
+		return nil, NewError(
+			InvalidField,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			parser.currentToken().Text,
+			)
+	}
+
+	var node Node
+
+	switch parser.currentToken().Type {
+	case FUNC: 
+		funcNode, err := newFuncNode(parser)
+		if err != nil {
+			return nil, err
+		}
+		node = funcNode
+	default:
+		fieldNode := FieldNode{}
+		fieldNode.Token = parser.currentToken()
+
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+
+		node = &fieldNode
+	}
+
+	if parser.currentToken().Type == AS {
+		castNode, err := newCastNode(parser, node)
+		if err != nil {
+			return nil, err
+		}
+
+		return castNode, nil
+	}
+
+	return node, nil
+}
+
+func (f *FieldNode) Table() Node {
+	return f
+}
+
+func (f *FieldNode) Columns() []Node {
+	return []Node{f}
+}
+
+func (f *FieldNode) String() string {
+	if f.Token.Type == STRING {
+		return "'" + f.Token.Text + "'"
+	}
+
+	return f.Token.Text
+}
+
+type ExpressionNode struct {
+	baseNode
+	precedence	int
+
+	prefix,
+	suffix 	Node
+}
+
+var _ Node = (*ExpressionNode)(nil)
+
+func newExpressionNode(parser *Parser) (Node, error) {
+	var node ExpressionNode
+
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	precedence, ok := precedenceMap[node.Token.Type]
+	if !ok {
+		return nil, NewError(
+			InvalidTypeForPrecedence,
+			node.Token.LineNumber,
+			node.Token.Start,
+			node.Token.Text,
+			)
+	}
+
+	node.precedence = precedence
+
+	return &node, nil
+}
+
+// expressions can't hold the table node
+func (e *ExpressionNode) Table() Node {
+	return nil
+}
+
+// expressions can't hold returned columns
+func (e *ExpressionNode) Columns() []Node {
+	return nil
+}
+
+func (e *ExpressionNode) String() string {
+	var buf bytes.Buffer
+
+	if prefix := e.prefix; prefix != nil {
+		if str := prefix.String(); len(str) > 0 {
+			buf.WriteString(str)
+			buf.WriteString(" ")
+		}
+	}
+
+	buf.WriteString(e.Token.Text)
+
+
+	if suffix := e.suffix; suffix != nil {
+		if str := suffix.String(); len(str) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(str)
+		}
+	}
+
+	return buf.String()
+}
+
+type OperatorNode struct {
+	infix				[]baseNode
+	prefix,
+	suffix			Node
+	precedence	int
+}
+
+var _ Node = (*OperatorNode)(nil)
+
+func newOperatorNode(parser *Parser) (Node, error) {
+	var node OperatorNode
+	node.precedence = 0
+
+	if parser.currentToken().isField() {
+		prefixNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.prefix = prefixNode
+	}
+
+	for {
+		if parser.currentToken().Type == EOF {
+			return &node, nil
+		}
+
+		if parser.currentToken().isField() {
+			break
+		}
+
+		if !parser.currentToken().isOperator() {
+			return nil, NewError(
+				InvalidOperatiorToken,
+				parser.currentToken().LineNumber,
+				parser.currentToken().Start,
+				parser.currentToken().Text,
+				)
+		}
+
+		infix := baseNode{
+			Token: parser.currentToken(),
+		}
+
+		node.infix = append(node.infix, infix)
+
+		precedence, ok := precedenceMap[infix.Token.Type]
+		if !ok {
+			return nil, NewError(
+				InvalidTypeForPrecedence,
+				infix.Token.LineNumber,
+				infix.Token.Start,
+				infix.Token.Text,
+				)
+		}
+
+		if precedence > node.precedence {
+			node.precedence = precedence
+		}
+
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+	}
+
+	// suffix is only relevant if prefix is also set
+	if node.prefix != nil {
+		suffixNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.suffix = suffixNode
+	}
+
+	return &node, nil
+}
+
+func (o *OperatorNode) Table() Node {
+	return nil
+}
+
+func (o *OperatorNode) Columns() []Node {
+	return nil
+}
+
+func (o *OperatorNode) String() string {
+	var buf bytes.Buffer
+
+	if prefix := o.prefix; prefix != nil {
+		if str := prefix.String(); len(str) > 0 {
+			buf.WriteString(str)
+		}
+		
+		if len(o.infix) != 0 {
+			buf.WriteString(" ")
+		}
+	}
+
+	for i := range o.infix {
+		buf.WriteString(o.infix[i].Token.Text)
+
+		if i < len(o.infix) - 1 {
+			buf.WriteString(" ")
+		}
+	}
+
+	if suffix := o.suffix; suffix != nil {
+		if str := suffix.String(); len(str) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(str)
+		}
+	}
+
+	return buf.String()
+}
+
+type CastNode struct {
+	baseNode
+	prefix,
+	suffix		Node
+}
+
+var _ Node = (*CastNode)(nil)
+
+func newCastNode(parser *Parser, prefix Node) (Node, error) {
+	var node CastNode
+
+	if parser.currentToken().Type != AS {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", AS, parser.currentToken().Type),
+			)
+	}
+
+	node.prefix = prefix
+
+	node.Token = parser.currentToken()
+
+	// consume AS token
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+	
+	suffix, err := newFieldNode(parser)
+	if err != nil {
+		return nil, err
+	}
+
+	node.suffix = suffix 
+
+	return &node, nil
+}
+
+func (c *CastNode) Columns() []Node {
+	return []Node{c.suffix}
+}
+
+func (c *CastNode) Table() Node {
+	return c.prefix
+}
+
+func (c *CastNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString(c.prefix.String())
+	buf.WriteString(" ")
+	buf.WriteString(c.Token.Text)
+	buf.WriteString(" ")
+	buf.WriteString(c.suffix.String())
+
+	return buf.String()
+}
+
+// FUNC
+type FuncNode struct {
+	baseNode
+
+	infix	[]Node
+	suffix Node
+}
+
+var _ Node = (*FuncNode)(nil)
+
+func newFuncNode(parser *Parser) (Node, error) {
+	var node FuncNode
+
+	if parser.currentToken().Type != FUNC {
+		return nil, NewError(
+			InvalidBaseNodeType,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			fmt.Sprintf("expected %s got %s", FUNC, parser.currentToken().Type),
+			)
+	}
+
+	node.Token = parser.currentToken()
+
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	if parser.currentToken().Type != L_PARAN {
+		return nil, NewError(
+			InvalidFuncChar,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			"(",
+			)
+	}
+
+	// consume left paran
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+	
+	for {
+		if !parser.currentToken().isField() {
+			break
+		}
+
+		infix, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.infix = append(node.infix, infix)
+	}
+
+	if parser.currentToken().Type != R_PARAN {
+		return nil, NewError(
+			InvalidFuncChar,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			")",
+			)
+	}
+
+	// consume right paran
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+func (f *FuncNode) Columns() []Node {
+	return []Node{f}
+}
+
+func (f *FuncNode) Table() Node {
+	return nil
+}
+
+func (f *FuncNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString(f.Token.Text)
+	buf.WriteString("(")
+
+	for i := range f.infix {
+		buf.WriteString(f.infix[i].String())
+
+		if i < (len(f.infix) - 1) {
+			buf.WriteString(", ")
+		}
+	}
+
+	buf.WriteString(")")
+
+	return buf.String()
+}
+
+// list
+type ListNode struct {
+	nodes []Node
+}
+
+var _ Node = (*ListNode)(nil)
+
+func newListNode(parser *Parser) (Node, error) {
+	var list ListNode
+	if parser.currentToken().Type != L_PARAN {
+		return nil, NewError(
+			InvalidListFormat,
+			parser.currentToken().LineNumber,
+			parser.currentToken().Start,
+			"(",
+			)
+	}
+
+	// consume l paran
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	for {
+		if parser.currentToken().Type == EOF {
+			return nil, NewError(
+				InvalidListFormat,
+				parser.currentToken().LineNumber,
+				parser.currentToken().Start,
+				")",
+				)
+		}
+
+		if parser.currentToken().Type == R_PARAN {
+			break
+		}
+
+		valueNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		list.nodes = append(list.nodes, valueNode)
+	}
+
+	// consume r paran
+	if err := parser.nextToken(); err != nil {
+		return nil, err
+	}
+
+	return &list, nil
+}
+
+// list can't hold the table node
+func (l *ListNode) Table() Node {
+	return nil
+}
+
+func (l *ListNode) Columns() []Node {
+	return l.nodes
+}
+
+func (l *ListNode) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString("(")
+
+	for i := range l.nodes {
+		buf.WriteString(l.nodes[i].String())
+
+		if i < len(l.nodes) - 1 {
+			buf.WriteString(", ")
+		}
+	}
+
+	buf.WriteString(")")
+
+	return buf.String()
+}
+
+
 
 // WHERE
 type WhereNode struct {

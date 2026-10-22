@@ -83,6 +83,33 @@ func (t Token) isField() bool {
 	return false
 }
 
+func (t Token) isOperator() bool {
+	switch t.Type {
+	case L_THAN:
+		return true
+	case G_THAN:
+		return true
+	case EQUAL:
+		return true
+	case N_EQUAL:
+		return true
+	case LT_EQUAL:
+		return true
+	case GT_EQUAL:
+		return true
+	case LIKE:
+		return true
+	case IS:
+		return true
+	case IN:
+		return true
+	case NOT:
+		return true
+	}
+
+	return false
+}
+
 type TokenType string
 
 const (

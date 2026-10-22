@@ -42,10 +42,10 @@ var (
 		InvalidQuery: "Query is invalid formatted",
 		InvalidField: "Unexpected token type when trying to parse field, got",
 		InvalidTypeForPrecedence: "Invalid token type for expression, precedence not set for",
-		InvalidExpressionType: "Invalid type for parsing expression",
 		InvalidEndOfStatement: "Invalid end of statement, add",
 		InvalidBaseNodeType: "Invalid base node type",
-		InvalidCastType: "Invalid cast type at",
+		InvalidFuncChar: "Invalid func char, add",
+		InvalidOperatiorToken: "Invalid operator token",
 
 		UnexpectedEOF: "Unexpected end of file after",
 		UnknownBaseNodeType: "Unknown base node type recived, this might be a resulte of a falty query before the current",
@@ -67,10 +67,10 @@ const (
 	InvalidQuery
 	InvalidField
 	InvalidTypeForPrecedence
-	InvalidExpressionType
 	InvalidEndOfStatement
 	InvalidBaseNodeType
-	InvalidCastType
+	InvalidFuncChar
+	InvalidOperatiorToken
 
 	UnexpectedEOF
 	UnknownBaseNodeType
