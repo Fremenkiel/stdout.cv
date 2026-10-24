@@ -1,2 +1,1 @@
 - Simplify tests
-- Submit only marked query
