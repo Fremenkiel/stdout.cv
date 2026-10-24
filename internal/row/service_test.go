@@ -186,7 +186,7 @@ func TestServiceGetRowDuration(t *testing.T) {
 
 type mockRepository struct {}
 
-func (r *mockRepository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
+func (r *mockRepository) GetRows(ctx context.Context, query string, columns []string) ([]*Row, error) {
 	time.Sleep(10 * time.Microsecond)
 
 	return []*Row{

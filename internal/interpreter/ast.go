@@ -6,9 +6,10 @@ import (
 )
 
 type Node interface {
-	Table() Node
-	Columns() []Node
-	String() string
+	Table()					Node
+	Columns()				[]string
+	String()				string
+	ReturnsValue()	bool
 }
 
 type baseNode struct {
@@ -103,7 +104,7 @@ func (i *InsertNode) Table() Node {
 	return i.into
 }
 
-func (i *InsertNode) Columns() []Node {
+func (i *InsertNode) Columns() []string {
 	return i.columns.Columns()
 }
 
@@ -120,6 +121,10 @@ func (i *InsertNode) String() string {
 	buf.WriteString(";")
 
 	return buf.String()
+}
+
+func (i *InsertNode) ReturnsValue() bool {
+	return false
 }
 
 // SELECT
@@ -207,8 +212,8 @@ func (s *SelectNode) Table() Node {
 	return nil
 }
 
-func (s *SelectNode) Columns() []Node {
-	var columns []Node
+func (s *SelectNode) Columns() []string {
+	var columns []string
 
 	for i := range s.columns {
 		columns = append(columns, s.columns[i].Columns()...)
@@ -220,7 +225,11 @@ func (s *SelectNode) Columns() []Node {
 func (s *SelectNode) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteString("SELECT ")
+	buf.WriteString("SELECT")
+
+	if len(s.columns) > 0 {
+		buf.WriteString(" ")
+	}
 
 	for i := range s.columns {
 		buf.WriteString(s.columns[i].String())
@@ -249,11 +258,15 @@ func (s *SelectNode) String() string {
 	return buf.String()
 }
 
+func (s *SelectNode) ReturnsValue() bool {
+	return true
+}
+
 // UPDATE
 type UpdateNode struct {
 	baseNode
 	table				Node
-	set					Node
+	set					[]Node
 	where				Node
 }
 
@@ -306,12 +319,31 @@ func newUpdateNode(parser *Parser) (Node, error) {
 		return nil, err
 	}
 
-	set, err := parser.expressionParse(0)
-	if err != nil {
-		return nil, err
-	}
+	for {
+		if parser.currentToken().Type == EOF {
+			return nil, NewError(
+				InvalidEndOfStatement,
+				parser.currentToken().LineNumber,
+				parser.currentToken().Start,
+				";",
+				)
+		}
 
-	node.set = set
+		if parser.currentToken().Type == SEMICOL {
+			break
+		}
+		
+		if parser.currentToken().Type == WHERE {
+			break
+		}
+
+		set, err := newOperatorNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.set = append(node.set, set)
+	}
 
 	if parser.currentToken().Type == WHERE {
 		where, err := newWhereNode(parser)
@@ -334,18 +366,33 @@ func (u *UpdateNode) Table() Node {
 }
 
 // update do not return data for our use
-func (u *UpdateNode) Columns() []Node {
+func (u *UpdateNode) Columns() []string {
 	return nil
 }
 
 func (u *UpdateNode) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteString("UPDATE ")
-	buf.WriteString(u.table.String())
-	buf.WriteString(" SET ")
+	buf.WriteString("UPDATE")
 
-	buf.WriteString(u.set.String())
+	if u.table != nil {
+		buf.WriteString(" ")
+		buf.WriteString(u.table.String())
+	}
+
+	buf.WriteString(" SET")
+
+	if len(u.set) > 0 {
+		buf.WriteString(" ")
+	}
+
+	for i := range u.set {
+		buf.WriteString(u.set[i].String())
+
+		if i < len(u.set) - 1 {
+			buf.WriteString(", ")
+		}
+	}
 
 	if u.where != nil {
 		buf.WriteString(" ")
@@ -355,6 +402,10 @@ func (u *UpdateNode) String() string {
 	buf.WriteString(";")
 
 	return buf.String()
+}
+
+func (u *UpdateNode) ReturnsValue() bool {
+	return false
 }
 
 // DELETE
@@ -424,7 +475,7 @@ func (d *DeleteNode) Table() Node {
 	return d.from
 }
 
-func (d *DeleteNode) Columns() []Node {
+func (d *DeleteNode) Columns() []string {
 	return nil
 }
 
@@ -442,6 +493,10 @@ func (d *DeleteNode) String() string {
 	buf.WriteString(";")
 
 	return buf.String()
+}
+
+func (d *DeleteNode) ReturnsValue() bool {
+	return false
 }
 
 type FieldNode struct {
@@ -496,8 +551,8 @@ func (f *FieldNode) Table() Node {
 	return f
 }
 
-func (f *FieldNode) Columns() []Node {
-	return []Node{f}
+func (f *FieldNode) Columns() []string {
+	return []string{f.String()}
 }
 
 func (f *FieldNode) String() string {
@@ -506,6 +561,10 @@ func (f *FieldNode) String() string {
 	}
 
 	return f.Token.Text
+}
+
+func (f *FieldNode) ReturnsValue() bool {
+	return false
 }
 
 type ExpressionNode struct {
@@ -548,7 +607,7 @@ func (e *ExpressionNode) Table() Node {
 }
 
 // expressions can't hold returned columns
-func (e *ExpressionNode) Columns() []Node {
+func (e *ExpressionNode) Columns() []string {
 	return nil
 }
 
@@ -564,7 +623,6 @@ func (e *ExpressionNode) String() string {
 
 	buf.WriteString(e.Token.Text)
 
-
 	if suffix := e.suffix; suffix != nil {
 		if str := suffix.String(); len(str) > 0 {
 			buf.WriteString(" ")
@@ -573,6 +631,10 @@ func (e *ExpressionNode) String() string {
 	}
 
 	return buf.String()
+}
+
+func (e *ExpressionNode) ReturnsValue() bool {
+	return false
 }
 
 type OperatorNode struct {
@@ -657,7 +719,7 @@ func (o *OperatorNode) Table() Node {
 	return nil
 }
 
-func (o *OperatorNode) Columns() []Node {
+func (o *OperatorNode) Columns() []string {
 	return nil
 }
 
@@ -690,6 +752,10 @@ func (o *OperatorNode) String() string {
 	}
 
 	return buf.String()
+}
+
+func (o *OperatorNode) ReturnsValue() bool {
+	return false
 }
 
 type CastNode struct {
@@ -731,8 +797,8 @@ func newCastNode(parser *Parser, prefix Node) (Node, error) {
 	return &node, nil
 }
 
-func (c *CastNode) Columns() []Node {
-	return []Node{c.suffix}
+func (c *CastNode) Columns() []string {
+	return []string{c.suffix.String()}
 }
 
 func (c *CastNode) Table() Node {
@@ -749,6 +815,10 @@ func (c *CastNode) String() string {
 	buf.WriteString(c.suffix.String())
 
 	return buf.String()
+}
+
+func (c *CastNode) ReturnsValue() bool {
+	return false
 }
 
 // FUNC
@@ -823,8 +893,8 @@ func newFuncNode(parser *Parser) (Node, error) {
 	return &node, nil
 }
 
-func (f *FuncNode) Columns() []Node {
-	return []Node{f}
+func (f *FuncNode) Columns() []string {
+	return []string{f.String()}
 }
 
 func (f *FuncNode) Table() Node {
@@ -848,6 +918,10 @@ func (f *FuncNode) String() string {
 	buf.WriteString(")")
 
 	return buf.String()
+}
+
+func (f *FuncNode) ReturnsValue() bool {
+	return false
 }
 
 // list
@@ -908,8 +982,14 @@ func (l *ListNode) Table() Node {
 	return nil
 }
 
-func (l *ListNode) Columns() []Node {
-	return l.nodes
+func (l *ListNode) Columns() []string {
+	var columns []string
+
+	for i := range l.nodes {
+		columns = append(columns, l.nodes[i].String())
+	}
+
+	return columns
 }
 
 func (l *ListNode) String() string {
@@ -930,7 +1010,9 @@ func (l *ListNode) String() string {
 	return buf.String()
 }
 
-
+func (l *ListNode) ReturnsValue() bool {
+	return false
+}
 
 // WHERE
 type WhereNode struct {
@@ -982,7 +1064,7 @@ func (w *WhereNode) Table() Node {
 	return nil
 }
 
-func (w *WhereNode) Columns() []Node {
+func (w *WhereNode) Columns() []string {
 	return nil
 }
 
@@ -999,6 +1081,10 @@ func (w *WhereNode) String() string {
 	buf.WriteString(w.expression.String())
 
 	return buf.String()
+}
+
+func (w *WhereNode) ReturnsValue() bool {
+	return false
 }
 
 func consumeEndChar(parser *Parser) error {

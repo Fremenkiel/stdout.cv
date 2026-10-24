@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/fremenkiel/stdout.cv/internal/query"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	_ "modernc.org/sqlite"
 )
@@ -23,7 +22,7 @@ func NewRepository(sc SessionCache) *Repository {
 	return &Repository{sessionCache: sc}
 }
 
-func (r *Repository) GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error) {
+func (r *Repository) GetRows(ctx context.Context, query string, columns []string) ([]*Row, error) {
 	sessionId, err := session.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -35,7 +34,7 @@ func (r *Repository) GetRows(ctx context.Context, queryString string, query *que
 		return nil, err
 	}
 
-	rows, err := db.QueryContext(ctx, queryString)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +43,7 @@ func (r *Repository) GetRows(ctx context.Context, queryString string, query *que
 	var list []*Row
 
 	for rows.Next() {
-		rawBuffer := make([]sql.RawBytes, len(query.Fields))
+		rawBuffer := make([]sql.RawBytes, len(columns))
 		callArgs := make([]interface{}, len(rawBuffer))
 
 		for i := range rawBuffer {
@@ -69,4 +68,28 @@ func (r *Repository) GetRows(ctx context.Context, queryString string, query *que
 	}
 
 	return list, nil
+}
+
+func (r *Repository) Execute(ctx context.Context, query string) error {
+	sessionId, err := session.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	databaseName, err := r.sessionCache.GetFile(sessionId)
+	db, err := sql.Open("sqlite", databaseName)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.ExecContext(ctx, query)
+	if err != nil {
+		return err
+	}
+
+	if err := db.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }

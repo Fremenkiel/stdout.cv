@@ -5,14 +5,16 @@ import (
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
-	"github.com/fremenkiel/stdout.cv/internal/query"
+	"github.com/fremenkiel/stdout.cv/internal/interpreter"
 )
 
 type repository interface {
-	GetRows(ctx context.Context, queryString string, query *query.Query) ([]*Row, error)
+	GetRows(ctx context.Context, query string, columns []string) ([]*Row, error)
+	Execute(ctx context.Context, query string) error
 }
 
 type SchemaService interface {
+	AppendWildcardSchema(ctx context.Context, tableName string, fields []string) ([]string, error)
 	GetSchema(ctx context.Context, name string) ([]*column.Column, error)
 }
 
@@ -30,42 +32,48 @@ func NewService(r repository, ss SchemaService) *Service {
 	}
 }
 
-func (s *Service) GetRows(ctx context.Context, queryString string) (*Result, error) {
-	q, err := s.parseQuery(ctx, queryString)
-	if err != nil {
+func (s *Service) GetRows(ctx context.Context, query string) (*Result, error) {
+	var response Result
+
+	parser := interpreter.NewParser()
+	if err := parser.ParseQuery(query); err != nil {
 		return nil, err
 	}
 
 	start := time.Now()
-	rows, err := s.repository.GetRows(ctx, queryString, q)
-	if err != nil {
-		return nil, err
-	}
 
-	return &Result{
-		Columns: q.Fields,
-		Rows: rows,
-		Duration: time.Now().UnixMicro() - start.UnixMicro(),
-	}, nil
-}
-
-func (s *Service) parseQuery(ctx context.Context, queryString string) (*query.Query, error) {
-	q, err := query.Parse(queryString)
-	if err != nil {
-		return nil, err
-	}
-
-	if q.WildcardIndex != -1 {
-		tableSchema, err := s.schemaService.GetSchema(ctx, q.TableName)
-		if err != nil {
-			return nil, err
-		}
-
-		q.Fields, err = query.AppendWildcardSchema(q.WildcardIndex, q.Fields, tableSchema)
-		if err != nil {
+	executeQueries := parser.GetExecureQueries()
+	for i := range executeQueries {
+		if err := s.repository.Execute(ctx, executeQueries[i].String()); err != nil {
 			return nil, err
 		}
 	}
 
-	return q, nil
+	returnQuery := parser.GetReturnQuery()
+	if returnQuery == nil {
+		response.Duration = time.Now().UnixMicro() - start.UnixMicro()
+
+		return &response, nil
+	}
+
+	columns, err := s.schemaService.AppendWildcardSchema(
+		ctx,
+		returnQuery.Table().String(),
+		returnQuery.Columns(),
+		)
+	if err != nil {
+		return nil, err
+	}
+
+	response.Columns = columns
+
+	rows, err := s.repository.GetRows(ctx, returnQuery.String(), response.Columns)
+	if err != nil {
+		return nil, err
+	}
+
+	response.Rows = rows
+	response.Duration = time.Now().UnixMicro() - start.UnixMicro()
+
+	return &response, nil
 }

@@ -124,7 +124,7 @@ func TestNewInsertNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}
@@ -322,7 +322,7 @@ func TestNewSelectNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}
@@ -423,7 +423,36 @@ func TestNewUpdateNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-		expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: InvalidBaseNodeType,
+		},
+		{
+			name: "multiple_set",
+			tokens: []Token{
+				{ Type: UPDATE, Text: "UPDATE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SET, Text: "SET" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: FIELD, Text: "email" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "test@gmail.dk" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "25" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "UPDATE users SET name = 'kevin', email = 'test@gmail.dk', age = 25 WHERE id = 1;",
+			expectedColumns: []string{
+				"name",
+			},
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: 0,
 		},
 	}
 
@@ -449,7 +478,7 @@ func TestNewUpdateNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}
@@ -563,7 +592,7 @@ func TestNewDeleteNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}
@@ -726,7 +755,7 @@ func TestNewFieldNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}
@@ -826,7 +855,7 @@ func TestNewExpressionNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}
@@ -1062,7 +1091,7 @@ func TestNewCastNode(t *testing.T) {
 
 			cols := response.Columns()
 			for i := range cols {
-				if str := cols[i].String(); test.expectedColumns[i] != str {
+				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
 			}

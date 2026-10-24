@@ -1,23 +1,21 @@
 package interpreter
 
 import (
-	"errors"
 	"fmt"
 )
 
-// Lexer
-var ErrInvalidQuery = errors.New("Query is invalid formatted")
-
-
 type Error struct {
-	msg  string
-	code ErrorCode
+	msg  				string
+	code 				ErrorCode
+	lineNumber,
+	startChar		int
 }
 
 var _ error = (*Error)(nil)
 
 func (e *Error) Error() string { return e.msg }
-func (e *Error) Code() int { return int(e.code) }
+func (e *Error) Code() ErrorCode { return e.code }
+func (e *Error) Pos() (lineNumber, startChar int) { return e.lineNumber, e.startChar }
 
 func NewError(code ErrorCode, line, pos int, str string) *Error {
 	return &Error{
@@ -25,21 +23,27 @@ func NewError(code ErrorCode, line, pos int, str string) *Error {
 			line, pos, parseErrorCode(code), str,
 			),
 		code: code,
+		lineNumber: line,
+		startChar: pos,
 	}
 }
 
 var (
 	ErrorCodeString = map[ErrorCode]string{
 		NoQuery: "No query given",
+		UnsupportedQuery: "Unsupported query",
 
 		InvalidInsertStatement: "Invalid INSERT statement, add",
 		InvalidSelectStatement: "Invalid SELECT statement, add",
 		InvalidUpdateStatement: "Invalid UPDATE statement, add",
 		InvalidDeleteStatement: "Invalid DELETE statement, add",
 
+		InvalidQuery: "Query is invalid formatted",
+		InvalidQueryLexNumber: "Query formatted error while lexing number",
+		InvalidQueryLexKeyword: "Query formatted error while lexing keyword",
+
 		InvalidString: "String is not correctly closed, add termination to",
 		InvalidListFormat: "Invalid list format, add",
-		InvalidQuery: "Query is invalid formatted",
 		InvalidField: "Unexpected token type when trying to parse field, got",
 		InvalidTypeForPrecedence: "Invalid token type for expression, precedence not set for",
 		InvalidEndOfStatement: "Invalid end of statement, add",
@@ -56,15 +60,19 @@ type ErrorCode int
 
 const (
 	NoQuery ErrorCode = iota
+	UnsupportedQuery
 
 	InvalidInsertStatement
 	InvalidSelectStatement
 	InvalidUpdateStatement
 	InvalidDeleteStatement
 
+	InvalidQuery
+	InvalidQueryLexNumber
+	InvalidQueryLexKeyword
+
 	InvalidString
 	InvalidListFormat
-	InvalidQuery
 	InvalidField
 	InvalidTypeForPrecedence
 	InvalidEndOfStatement

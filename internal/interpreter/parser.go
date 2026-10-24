@@ -24,6 +24,7 @@ func NewParser() *Parser {
 }
 
 func (p *Parser) ParseQuery(query string) error {
+	p.trees = make([]Node, 0, 1)
 	p.lexer.Write(query)
 	p.r = 0
 
@@ -48,7 +49,7 @@ func (p *Parser) ParseQuery(query string) error {
 		handler, ok := p.handlers[p.currentToken().Type]
 		if !ok {
 			return NewError(
-				UnknownBaseNodeType,
+				UnsupportedQuery,
 				p.currentToken().LineNumber,
 				p.currentToken().Start,
 				p.currentToken().Text,
@@ -61,6 +62,31 @@ func (p *Parser) ParseQuery(query string) error {
 		}
 
 		p.trees = append(p.trees, node)
+	}
+
+	return nil
+}
+
+func (p *Parser) GetExecureQueries() []Node {
+	var mod int = 0
+	if rq := p.GetReturnQuery(); rq != nil {
+		mod = 1
+	}
+
+	if (len(p.trees) - mod) < 0 {
+		return nil
+	}
+
+	return p.trees[0:len(p.trees) - mod]
+}
+
+func (p *Parser) GetReturnQuery() Node {
+	if len(p.trees) == 0 {
+		return nil
+	}
+
+	if rq := p.trees[len(p.trees) - 1]; rq.ReturnsValue() {
+		return rq
 	}
 
 	return nil
@@ -125,14 +151,6 @@ func (p *Parser) currentToken() Token {
 	}
 
 	return p.tokens[p.r]
-}
-
-func (p *Parser) peakToken() Token {
-	if (p.r + 1) >= len(p.tokens) {
-		return Token{}
-	}
-
-	return p.tokens[p.r + 1]
 }
 
 // returns true if there are more tokens to read, false if EOF

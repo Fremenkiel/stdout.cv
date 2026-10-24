@@ -265,70 +265,70 @@ func TestParseQuery(t *testing.T) {
 		})
 	}
 }
-//
-// func TestParseQueryTokenStats(t *testing.T) {
-// 	tests := []struct{
-// 		name						string
-// 		query						string
-// 		expectedTokens	[]Token
-// 	} {
-// 		{
-// 			name: "insert",
-// 			query: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
-// 			expectedTokens: []Token{
-// 				{ Type: INSERT, Text: "INSERT", LineNumber: 1, Start: 0, End: 6 },
-// 				{ Type: INTO, Text: "INTO", LineNumber: 1, Start: 7, End: 11 },
-// 				{ Type: FIELD, Text: "users", LineNumber: 1, Start: 12, End: 17 },
-// 				{ Type: L_PARAN, Text: "(", LineNumber: 1, Start: 18, End: 19 },
-// 				{ Type: FIELD, Text: "name", LineNumber: 1, Start: 19, End: 23 },
-// 				{ Type: FIELD, Text: "email", LineNumber: 1, Start: 25, End: 30 },
-// 				{ Type: R_PARAN, Text: ")", LineNumber: 1, Start: 30, End: 31 },
-// 				{ Type: VALUES, Text: "VALUES", LineNumber: 1, Start: 32, End: 38 },
-// 				{ Type: L_PARAN, Text: "(", LineNumber: 1, Start: 39, End: 40 },
-// 				{ Type: STRING, Text: "kevin", LineNumber: 1, Start: 41, End: 46 },
-// 				{ Type: STRING, Text: "test@gmail.dk", LineNumber: 1, Start: 50, End: 63 },
-// 				{ Type: R_PARAN, Text: ")", LineNumber: 1, Start: 64, End: 65 },
-// 				{ Type: SEMICOL, Text: ";", LineNumber: 1, Start: 65, End: 66 },
-// 				{ Type: EOF, Text: "", LineNumber: 1, Start: 66, End: 66 },
-// 			},
-// 		},
-// 	}
-// 	for _, test := range tests {
-// 		t.Run(test.name, func(t *testing.T) {
-// 			parser := NewParser()
-//
-// 			if err := parser.ParseQuery(test.query); err != nil {
-// 				t.Fatal(err)
-// 			}
-//
-// 			if len(test.expectedTokens) != len(parser.tokens) {
-// 				t.Fatalf("unexpected len, %v got %v", len(test.expectedTokens), len(parser.tokens))
-// 			}
-//
-// 			for i := range parser.tokens {
-// 				if test.expectedTokens[i].Type != parser.tokens[i].Type {
-// 					t.Fatalf("unexpected token type at %v, %v (%s) got %v (%s)", i, test.expectedTokens[i].Type, test.expectedTokens[i].Text, parser.tokens[i].Type, parser.tokens[i].Text)
-// 				}
-//
-// 				if test.expectedTokens[i].Text != parser.tokens[i].Text {
-// 					t.Fatalf("unexpected token text at %v, %s got %s", i, test.expectedTokens[i].Text, parser.tokens[i].Text)
-// 				}
-//
-// 				if test.expectedTokens[i].LineNumber != parser.tokens[i].LineNumber {
-// 					t.Fatalf("unexpected line number at %v, %d got %v", i, test.expectedTokens[i].LineNumber, parser.tokens[i].LineNumber)
-// 				}
-//
-// 				if test.expectedTokens[i].Start != parser.tokens[i].Start {
-// 					t.Fatalf("unexpected start position at %v, %d got %v", i, test.expectedTokens[i].Start, parser.tokens[i].Start)
-// 				}
-//
-// 				if test.expectedTokens[i].End != parser.tokens[i].End {
-// 					t.Fatalf("unexpected end position at %v, %d got %v", i, test.expectedTokens[i].End, parser.tokens[i].End)
-// 				}
-// 			}
-// 		})
-// 	}
-// }
+
+func TestParseQueryTokenStats(t *testing.T) {
+	tests := []struct{
+		name						string
+		query						string
+		expectedTokens	[]Token
+	} {
+		{
+			name: "insert",
+			query: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
+			expectedTokens: []Token{
+				{ Type: INSERT, Text: "INSERT", LineNumber: 1, Start: 0, End: 6 },
+				{ Type: INTO, Text: "INTO", LineNumber: 1, Start: 7, End: 11 },
+				{ Type: FIELD, Text: "users", LineNumber: 1, Start: 12, End: 17 },
+				{ Type: L_PARAN, Text: "(", LineNumber: 1, Start: 18, End: 19 },
+				{ Type: FIELD, Text: "name", LineNumber: 1, Start: 19, End: 23 },
+				{ Type: FIELD, Text: "email", LineNumber: 1, Start: 25, End: 30 },
+				{ Type: R_PARAN, Text: ")", LineNumber: 1, Start: 30, End: 31 },
+				{ Type: VALUES, Text: "VALUES", LineNumber: 1, Start: 32, End: 38 },
+				{ Type: L_PARAN, Text: "(", LineNumber: 1, Start: 39, End: 40 },
+				{ Type: STRING, Text: "kevin", LineNumber: 1, Start: 41, End: 46 },
+				{ Type: STRING, Text: "test@gmail.dk", LineNumber: 1, Start: 50, End: 63 },
+				{ Type: R_PARAN, Text: ")", LineNumber: 1, Start: 64, End: 65 },
+				{ Type: SEMICOL, Text: ";", LineNumber: 1, Start: 65, End: 66 },
+				{ Type: EOF, Text: "", LineNumber: 1, Start: 66, End: 66 },
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := NewParser()
+
+			if err := parser.ParseQuery(test.query); err != nil {
+				t.Fatal(err)
+			}
+
+			if len(test.expectedTokens) != len(parser.tokens) {
+				t.Fatalf("unexpected len, %v got %v", len(test.expectedTokens), len(parser.tokens))
+			}
+
+			for i := range parser.tokens {
+				if test.expectedTokens[i].Type != parser.tokens[i].Type {
+					t.Fatalf("unexpected token type at %v, %v (%s) got %v (%s)", i, test.expectedTokens[i].Type, test.expectedTokens[i].Text, parser.tokens[i].Type, parser.tokens[i].Text)
+				}
+
+				if test.expectedTokens[i].Text != parser.tokens[i].Text {
+					t.Fatalf("unexpected token text at %v, %s got %s", i, test.expectedTokens[i].Text, parser.tokens[i].Text)
+				}
+
+				if test.expectedTokens[i].LineNumber != parser.tokens[i].LineNumber {
+					t.Fatalf("unexpected line number at %v, %d got %v", i, test.expectedTokens[i].LineNumber, parser.tokens[i].LineNumber)
+				}
+
+				if test.expectedTokens[i].Start != parser.tokens[i].Start {
+					t.Fatalf("unexpected start position at %v, %d got %v", i, test.expectedTokens[i].Start, parser.tokens[i].Start)
+				}
+
+				if test.expectedTokens[i].End != parser.tokens[i].End {
+					t.Fatalf("unexpected end position at %v, %d got %v", i, test.expectedTokens[i].End, parser.tokens[i].End)
+				}
+			}
+		})
+	}
+}
 
 func TestParseQueryTable(t *testing.T) {
 	tests := []struct{
@@ -340,6 +340,24 @@ func TestParseQueryTable(t *testing.T) {
 		{
 			name: "insert",
 			query: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
+			expectedResponse: "users",
+			expectedError: nil,
+		},
+		{
+			name: "select",
+			query: "SELECT name, age FROM users WHERE id = 1;",
+			expectedResponse: "users",
+			expectedError: nil,
+		},
+		{
+			name: "update",
+			query: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
+			expectedResponse: "users",
+			expectedError: nil,
+		},
+		{
+			name: "delete",
+			query: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: "users",
 			expectedError: nil,
 		},
@@ -385,6 +403,27 @@ func TestParseQueryColumns(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "select",
+			query: "SELECT name, age FROM users WHERE id = 1;",
+			expectedResponse: []string{
+				"name",
+				"age",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "update",
+			query: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
+			expectedResponse: []string{},
+			expectedError: nil,
+		},
+		{
+			name: "delete",
+			query: "DELETE FROM users WHERE id = 1;",
+			expectedResponse: []string{},
+			expectedError: nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -399,13 +438,13 @@ func TestParseQueryColumns(t *testing.T) {
 			}
 
 			if treeLen := len(parser.trees); treeLen != 1 {
-				t.Fatalf("unexpected tree len, 1 got %v", treeLen)
+				t.Fatalf("unexpected tree len, 1 got %v (%v)", treeLen, parser.trees)
 			}
 
 			response := parser.trees[0].Columns()
 			for i := range response {
-				if test.expectedResponse[i] != response[i].String() {
-					t.Fatalf("unexpected response, '%s' got '%s'", test.expectedResponse[i], response[i].String())
+				if test.expectedResponse[i] != response[i] {
+					t.Fatalf("unexpected response, '%s' got '%s'", test.expectedResponse[i], response[i])
 				}
 			}
 		})
@@ -547,3 +586,107 @@ func TestExpressionParse(t *testing.T) {
 	}
 }
 
+func TestGetExecuteQueries(t *testing.T) {
+	tests := []struct{
+		name							string
+		nodes							[]Node
+		expectedResponse  []Node
+	} {
+		{
+			name: "no_execute",
+			nodes: []Node{
+					&SelectNode{},
+			},
+			expectedResponse: nil,
+		},
+		{
+			name: "only_execute",
+			nodes: []Node{
+					&UpdateNode{},
+			},
+			expectedResponse: []Node{
+					&UpdateNode{},
+				},
+		},
+		{
+			name: "update_and_select",
+			nodes: []Node{
+					&UpdateNode{},
+					&SelectNode{},
+			},
+			expectedResponse: []Node{
+					&UpdateNode{},
+				},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				trees: test.nodes,
+			}
+
+			response := parser.GetExecureQueries()
+
+			if len(test.expectedResponse) != len(response) {
+				t.Fatalf("unexpected response len, %v got %v", len(test.expectedResponse), len(response))
+			}
+
+			for i := range response {
+				if test.expectedResponse[i].String() != response[i].String() {
+					t.Fatalf("unexpected response entry (%v), %s got %s", i, test.expectedResponse[i].String(), response[i].String())
+				}
+			}
+		})
+	}
+}
+
+func TestGetReturnQuery(t *testing.T) {
+	tests := []struct{
+		name							string
+		nodes							[]Node
+		expectedResponse  Node
+	} {
+		{
+			name: "no_return",
+			nodes: []Node{
+					&UpdateNode{},
+			},
+			expectedResponse: nil,
+		},
+		{
+			name: "only_return",
+			nodes: []Node{
+					&SelectNode{},
+			},
+			expectedResponse: &SelectNode{},
+		},
+		{
+			name: "update_and_select",
+			nodes: []Node{
+					&UpdateNode{},
+					&SelectNode{},
+			},
+			expectedResponse: &SelectNode{},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				trees: test.nodes,
+			}
+
+			response := parser.GetReturnQuery()
+
+			if test.expectedResponse == nil && response == nil {
+				return
+			}
+
+			if test.expectedResponse.String() != response.String() {
+				t.Fatalf("unexpected response, %s got %s", test.expectedResponse.String(), response.String())
+			}
+		})
+	}
+}
+  

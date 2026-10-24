@@ -86,7 +86,7 @@ func TestHandlerGetRows(t *testing.T) {
 
 type mockService struct {}
 
-func (m *mockService) GetRows(ctx context.Context, queryString string) (*Result, error) {
+func (m *mockService) GetRows(ctx context.Context, query string) (*Result, error) {
 	_, ok := ctx.Value("session_key").(string)
 	if !ok {
 		return nil, session.ErrNoSessionInContext

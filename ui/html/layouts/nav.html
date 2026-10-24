@@ -2,48 +2,47 @@
 <nav class="page__nav">
   <div class="nav__header">
     <span class="nav__icon">
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 18V6" stroke-linecap="round"/>
-      <path d="M20 6V18" stroke-linecap="round"/>
-      <path d="M12 10C16.4183 10 20 8.20914 20 6C20 3.79086 16.4183 2 12 2C7.58172 2 4 3.79086 4 6C4 8.20914 7.58172 10 12 10Z"/>
-      <path d="M20 12C20 14.2091 16.4183 16 12 16C7.58172 16 4 14.2091 4 12"/>
-      <path d="M20 18C20 20.2091 16.4183 22 12 22C7.58172 22 4 20.2091 4 18"/>
-    </svg>
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 18V6" stroke-linecap="round"/>
+        <path d="M20 6V18" stroke-linecap="round"/>
+        <path d="M12 10C16.4183 10 20 8.20914 20 6C20 3.79086 16.4183 2 12 2C7.58172 2 4 3.79086 4 6C4 8.20914 7.58172 10 12 10Z"/>
+        <path d="M20 12C20 14.2091 16.4183 16 12 16C7.58172 16 4 14.2091 4 12"/>
+        <path d="M20 18C20 20.2091 16.4183 22 12 22C7.58172 22 4 20.2091 4 18"/>
+      </svg>
     </span>
     <h1 class="title nav__title">stdout.db</h1>
   </div>
-<div class="nav__subtitle">
-  <h4>Tables</h4>
+  <div class="nav__subtitle">
+    <h4>Tables</h4>
   </div>
-<ul class="nav__list">
-{{ range .Tables }}
+  <ul class="nav__list">
+    {{ range $i, $val := .Tables }}
     <li>
-      {{ template "nav-table" . }}
-      </li>
-{{ end }}
-</ul>
+      <details class="schema" {{ if eq $i 0 }}open{{ end }}>
+        {{ template "nav-table" $val }}
+      </details>
+    </li>
+    {{ end }}
+  </ul>
 </nav>
 {{ end }}
 
 {{ define "nav-table" }}
-<details class="schema">
-  <summary class="schema__header">
-    <div class="schema__header--primary">
-      <svg class="schema__icon"><path data-dc-tpl="117" d="M4 2.5 7.5 6 4 9.5" fill="none"stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      <h3>{{ .Name }}</h3>
-    </div>
-    <div class="schema__header--secondary">
-      <span>{{ .RowCount }}</span>
-    </div>
-  </summary>
-  <ul class="schema__list">
-    {{ range .Columns }}
-    <li>
-      <span class="schema__name">{{ .Name }}</span>
-      <span class="schema__type">{{ .Type }}{{ if not .IsNullable }} NOT NULL{{ end }}{{ if .IsPrimaryKey }} PK{{ end }}{{ if .IsForeignKey }} FK{{ end }}</span>
-    </li>
-    {{ end }}
+<summary class="schema__header">
+  <div class="schema__header--primary">
+    <svg class="schema__icon"><path data-dc-tpl="117" d="M4 2.5 7.5 6 4 9.5" fill="none"stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <h3>{{ .Name }}</h3>
+  </div>
+  <div class="schema__header--secondary">
+    <span>{{ .RowCount }}</span>
+  </div>
+</summary>
+<ul class="schema__list">
+  {{ range .Columns }}
+  <li>
+    <span class="schema__name">{{ .Name }}</span>
+    <span class="schema__type">{{ .Type }}{{ if not .IsNullable }} NOT NULL{{ end }}{{ if .IsPrimaryKey }} PK{{ end }}{{ if .IsForeignKey }} FK{{ end }}</span>
+  </li>
+  {{ end }}
 </ul>
-</details>
-
 {{ end }}

@@ -21,8 +21,8 @@ func NewLexer() *Lexer {
 		buf: nil,
 		r: -1,
 		len: -1,
-		currentChar: 0,
-		currentLine: 1,
+		currentChar: -1,
+		currentLine: -1,
 	}
 }
 
@@ -30,11 +30,18 @@ func NewLexer() *Lexer {
 func (l *Lexer) Write(str string) {
 	l.buf = []byte(str)
 	l.len = len(l.buf)
+	l.currentLine = 1
+	l.currentChar = 0
 }
 
 func (l *Lexer) Next() (Token, error) {
 	if l.len == -1 {
-		return Token{}, NewError(NoQuery, -1, -1, "")
+		return Token{}, NewError(
+			NoQuery, 
+			-1,
+			-1, 
+			"",
+			)
 	}
 
 	var c byte
@@ -57,15 +64,8 @@ func (l *Lexer) Next() (Token, error) {
 				return Token{}, err
 			}
 
-			// consume EOL char
-			_, err = l.readByte()
-			if err != nil {
-				if err == io.EOF {
-					return NewToken(EOF, "", l), nil
-				}
-				return Token{}, err
-			}
 			l.addLineCount()
+			continue
 		}
 
 		if l.isLineBreak(c) {
@@ -109,7 +109,12 @@ func (l *Lexer) Next() (Token, error) {
 				b, _ := l.readByte()
 				return NewToken(N_EQUAL, string([]byte{c, b}), l), nil
 			}
-			return Token{}, ErrInvalidQuery
+			return Token{}, NewError(
+				InvalidQuery,
+				l.currentLine,
+				l.currentChar - 1,
+				string(c),
+				)
 		case '=':
 			return NewToken(EQUAL, string(c), l), nil
 		}
@@ -135,7 +140,13 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 		}
 
 		if !l.isNumber(b) {
-			return Token{}, ErrInvalidQuery
+			cStr := string(append(num, b))
+			return Token{}, NewError(
+				InvalidQueryLexNumber,
+				l.currentLine,
+				l.currentChar - len(cStr),
+				cStr,
+				)
 		}
 
 		if b == '.' {
@@ -150,11 +161,21 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 	switch isFloat {
 	case false:
 		if _, err := strconv.ParseInt(str, 0, 0); err != nil {
-			return Token{}, ErrInvalidQuery
+			return Token{}, NewError(
+				InvalidQueryLexNumber,
+				l.currentLine,
+				l.currentChar - len(str),
+				str,
+				)
 		}
 	case true:
 		if _, err := strconv.ParseFloat(str, 64); err != nil {
-			return Token{}, ErrInvalidQuery
+			return Token{}, NewError(
+				InvalidQueryLexNumber,
+				l.currentLine,
+				l.currentChar - len(str),
+				str,
+				)
 		}
 	}
 
@@ -193,15 +214,50 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 
 		switch p {
 		case '-':
-			return Token{}, ErrInvalidQuery
+			 cStr := string(append(kw, p))
+
+			return Token{}, NewError(
+				InvalidQueryLexKeyword,
+				l.currentLine,
+				(l.currentChar + 1) - len(cStr),
+				cStr,
+				)
 		case '!':
-			return Token{}, ErrInvalidQuery
+			 cStr := string(append(kw, p))
+
+			return Token{}, NewError(
+				InvalidQueryLexKeyword,
+				l.currentLine,
+				(l.currentChar + 1) - len(cStr),
+				string(append(kw, p)),
+				)
 		case '=':
-			return Token{}, ErrInvalidQuery
+			 cStr := string(append(kw, p))
+
+			return Token{}, NewError(
+				InvalidQueryLexKeyword,
+				l.currentLine,
+				(l.currentChar + 1) - len(cStr),
+				cStr,
+				)
 		case '<':
-			return Token{}, ErrInvalidQuery
+			 cStr := string(append(kw, p))
+
+			return Token{}, NewError(
+				InvalidQueryLexKeyword,
+				l.currentLine,
+				(l.currentChar + 1) - len(cStr),
+				cStr,
+				)
 		case '>':
-			return Token{}, ErrInvalidQuery
+			 cStr := string(append(kw, p))
+
+			return Token{}, NewError(
+				InvalidQueryLexKeyword,
+				l.currentLine,
+				(l.currentChar + 1) - len(cStr),
+				cStr,
+				)
 		case '(':
 			break outerloop
 		case ')':
@@ -209,7 +265,14 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		}
 
 		if l.isStringMarker(p) {
-			return Token{}, ErrInvalidQuery
+			 cStr := string(append(kw, p))
+
+			return Token{}, NewError(
+				InvalidQueryLexKeyword,
+				l.currentLine,
+				(l.currentChar + 1) - len(cStr),
+				cStr,
+				)
 		}
 
 		b, err := l.readByte()
@@ -333,7 +396,12 @@ func (l *Lexer) readUntilEndOfString() ([]byte, error) {
 
 		b, err := l.readByte()
 		if err != nil {
-			return nil, NewError(InvalidString, l.currentLine, l.r - len(buf), string(buf))
+			return nil, NewError(
+				InvalidString,
+				l.currentLine,
+				l.currentChar - 1,
+				string(buf),
+				)
 		}
 
 		buf = append(buf, b)
@@ -367,7 +435,7 @@ func (l *Lexer) readByte() (byte, error) {
 	l.r = l.r + 1
 
 	// set current char for error messages
-	l.currentChar = l.r + 1
+	l.currentChar = l.currentChar + 1
 
 	return l.buf[l.r], nil
 }

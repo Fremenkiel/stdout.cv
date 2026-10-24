@@ -34,9 +34,8 @@
 
 .nav__list {
   margin: var(--size-margin-y) calc(var(--size-nav-margin-x) - var(--size-padding-x));
-  margin-top: 0;
 }
 
 .nav__list>li {
-  margin-bottom: var(--size-margin-y);
+  margin-bottom: calc(var(--size-margin-y) / 2);
 }

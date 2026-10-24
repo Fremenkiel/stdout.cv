@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/fremenkiel/stdout.cv/internal/interpreter"
 	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
-	"github.com/fremenkiel/stdout.cv/internal/query"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
 
@@ -18,7 +18,7 @@ type Renderer interface {
 }
 
 type RowService interface {
-	GetRows(ctx context.Context, queryString string) (*Result, error)
+	GetRows(ctx context.Context, query string) (*Result, error)
 }
 
 type Handler struct {
@@ -33,19 +33,20 @@ func NewHandler(r Renderer, s RowService) *Handler {
 func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	queryString := r.URL.Query().Get("query")
-	if len(queryString) == 0 {
+	query := r.URL.Query().Get("query")
+	if len(query) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	result, err := h.service.GetRows(ctx, queryString)
+	result, err := h.service.GetRows(ctx, query)
 	if err != nil {
-		if errors.Is(err, query.ErrQueryNotAllowed) {
+		if typedErr, ok := errors.AsType[*interpreter.Error](err); ok {
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			libErr := &lib.Error{
-				Title: "Query not allowed",
-				Message: "The entered query is not allowed at this point in time",
+				Title: "Error",
+				Message: typedErr.Error(),
+				Code: int(typedErr.Code()),
 			}
 			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
 				logger.LogError(
