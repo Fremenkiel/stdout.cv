@@ -66,7 +66,7 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if libErr, ok := lib.ParseSqliteError(err); ok {
-			libErr.Duration =time.Now().UnixMicro() - start.UnixMicro()
+			libErr.Duration = time.Now().UnixMicro() - start.UnixMicro()
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
 				logger.LogError(

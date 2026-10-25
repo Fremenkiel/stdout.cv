@@ -1,4 +1,4 @@
-var editor = CodeMirror.fromTextArea(document.getElementById('textarea-query'), {
+const editor = CodeMirror.fromTextArea(document.getElementById('textarea-query'), {
   lineNumbers: true,
   mode: 'text/x-sql',
   keyMap: 'vim',
@@ -10,4 +10,58 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('submit-query').click();
   }
 });
+
+function RenderErrorSnippet(id, lineNumber, startChar, endChar) {
+  const el = document.getElementById(id);
+
+  // remove old snippets
+  ResetErrorSnippet(el);
+
+  // if line number is not set, don't show snippet
+  if (lineNumber === 0) {
+    return;
+  }
+
+  const lineIndex = lineNumber - 1;
+  const firstLineIndex = lineIndex == 0 ? 0 : lineIndex - 1;
+  const lastLineIndex = lineIndex + 1;
+
+  const firstLineNumber = lineNumber == 1 ? 1 : lineNumber - 1;
+
+  // get line value -+ 1
+  const value = editor.doc.getRange({line: firstLineIndex, ch: 0}, {line: lastLineIndex});
+
+  // mark editor text as error
+  editor.doc.markText(
+    { line: lineIndex, ch: startChar},
+    { line: lineIndex, ch: endChar},
+    { className: "text-error", clearOnEnter: true }
+  );
+
+  // create error snippet
+  var snippet = CodeMirror(el, {
+    value: value,
+    firstLineNumber: firstLineNumber,
+    lineNumbers: true,
+    mode: 'text/x-sql',
+    readOnly: true,
+    showCursorWhenSelecting: false,
+  });
+
+  // mark snippet text as error
+  snippet.doc.markText(
+    { line: 1, ch: startChar},
+    { line: 1, ch: endChar},
+    { className: "text-error" }
+  );
+
+  // mark line number as error
+  snippet.doc.addLineClass(1, "wrap", "error-line")
+}
+
+function ResetErrorSnippet(el) {
+  for(var i = 0; i < el.childNodes.length; i++) {
+    el.childNodes[i].remove();
+  }
+}
 

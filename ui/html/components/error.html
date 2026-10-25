@@ -4,31 +4,16 @@
     <h1 class="error__title">{{ .Code }}</h1>
     <h2 class="error__description">line {{ if .LineNumber }}{{ .LineNumber }}{{ else }}0{{ end }}, col {{ if .CharStartNumber }}{{ .CharStartNumber }}{{ else }}0{{ end }}</h2>
   </div>
-<div class="error__editor" id="editor-error"></div>
+<div class="error__snippet" id="snippet-error"></div>
 </div>
+{{ if .Code }}
 <script>
-const lineNumber = {{ if .LineNumber }}{{ .LineNumber }}{{ else }}1{{ end }};
-const firstLineNumber = lineNumber == 1 ? 1 : lineNumber - 1;
-
-const startChar = {{ if .CharStartNumber }}{{ .CharStartNumber }}{{ else }}0{{ end }};
-const endChar = {{ if .CharEndNumber }}{{ .CharEndNumber }}{{ else }}0{{ end }};
-
-// line index start at 0
-const value = document.querySelector("#form-query .CodeMirror").CodeMirror.doc.getRange({line: firstLineNumber - 1, ch: 0}, {line: lineNumber});
-
-console.log(value);
-
-var editor = CodeMirror(document.getElementById('editor-error'), {
-  value: value,
-  firstLineNumber: firstLineNumber,
-  lineNumbers: true,
-  mode: 'text/x-sql',
-  readOnly: true,
-  showCursorWhenSelecting: false,
-});
-
-editor.doc.markText({ line: 1, ch: startChar}, { line: 1, ch: endChar}, { css: "background-color: var(--color-background-error); color: var(--color-text-error); text-decoration: underline wavy var(--color-text-error-decoration)" });
-editor.doc.addLineClass(1, "wrap", "error-line")
-
+RenderErrorSnippet(
+  "snippet-error",
+  {{ if .LineNumber }}{{ .LineNumber }}{{ else }}0{{ end }},
+  {{ if .CharStartNumber }}{{ .CharStartNumber }}{{ else }}0{{ end }},
+  {{ if .CharEndNumber }}{{ .CharEndNumber }}{{ else }}0{{ end }}
+);
 </script>
+{{ end }}
 {{ end }}

@@ -1,3 +1,12 @@
+.text-error {
+  text-decoration: underline wavy var(--color-text-error-decoration);
+}
+
+.error__container .text-error {
+  background-color: var(--color-background-error);
+  color: var(--color-text-error);
+}
+
 .error-line .CodeMirror-linenumber {
   color: var(--color-text-error-decoration);
 }

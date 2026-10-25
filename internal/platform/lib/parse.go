@@ -25,6 +25,9 @@ func ParseSqliteError(err error) (*Error, bool) {
 			return &Error{
 				Message: sqliteError.Error(),
 				Code: sqlite.ErrorCodeString[sqliteError.Code()],
+				LineNumber: 0,
+				CharStartNumber: 0,
+				CharEndNumber: 0,
 			}, true
 		}
 	}
