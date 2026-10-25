@@ -38,7 +38,7 @@ func TestNewInsertNode(t *testing.T) {
 				"age",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_into",
@@ -110,11 +110,19 @@ func TestNewInsertNode(t *testing.T) {
 			}
 
 			response, err := newInsetNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -165,7 +173,7 @@ func TestNewSelectNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "where",
@@ -186,7 +194,7 @@ func TestNewSelectNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "wildcard",
@@ -205,7 +213,7 @@ func TestNewSelectNode(t *testing.T) {
 				"*",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "as",
@@ -224,7 +232,7 @@ func TestNewSelectNode(t *testing.T) {
 				"first_name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func",
@@ -241,7 +249,7 @@ func TestNewSelectNode(t *testing.T) {
 				"now()",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func_as",
@@ -260,7 +268,7 @@ func TestNewSelectNode(t *testing.T) {
 				"today",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "table_as",
@@ -279,7 +287,7 @@ func TestNewSelectNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "update",
@@ -308,11 +316,19 @@ func TestNewSelectNode(t *testing.T) {
 			}
 
 			response, err := newSelectNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -365,7 +381,7 @@ func TestNewUpdateNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "where",
@@ -388,7 +404,7 @@ func TestNewUpdateNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_set",
@@ -452,7 +468,7 @@ func TestNewUpdateNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 	}
 
@@ -464,11 +480,19 @@ func TestNewUpdateNode(t *testing.T) {
 			}
 
 			response, err := newUpdateNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -516,7 +540,7 @@ func TestNewDeleteNode(t *testing.T) {
 			expectedResponse: "DELETE FROM users;",
 			expectedColumns: []string{},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "where",
@@ -534,7 +558,7 @@ func TestNewDeleteNode(t *testing.T) {
 			expectedResponse: "DELETE FROM users WHERE id = 1;",
 			expectedColumns: []string{},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_from",
@@ -578,11 +602,19 @@ func TestNewDeleteNode(t *testing.T) {
 			}
 
 			response, err := newDeleteNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -632,7 +664,7 @@ func TestNewFieldNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "name" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "field_as",
@@ -647,7 +679,7 @@ func TestNewFieldNode(t *testing.T) {
 				"first_name",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "name" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "string",
@@ -660,7 +692,7 @@ func TestNewFieldNode(t *testing.T) {
 				"'kevin'",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "'kevin'" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "number",
@@ -673,7 +705,7 @@ func TestNewFieldNode(t *testing.T) {
 				"1",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "1" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "number",
@@ -686,7 +718,7 @@ func TestNewFieldNode(t *testing.T) {
 				"1",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "1" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func",
@@ -701,7 +733,7 @@ func TestNewFieldNode(t *testing.T) {
 				"now()",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func_as",
@@ -718,7 +750,7 @@ func TestNewFieldNode(t *testing.T) {
 				"time",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "now()" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "SELECT",
@@ -741,11 +773,20 @@ func TestNewFieldNode(t *testing.T) {
 			}
 
 			response, err := newFieldNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -793,7 +834,7 @@ func TestNewExpressionNode(t *testing.T) {
 			expetedPrecedense: 0,
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "and",
@@ -805,7 +846,7 @@ func TestNewExpressionNode(t *testing.T) {
 			expetedPrecedense: 2,
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "semicol",
@@ -817,7 +858,7 @@ func TestNewExpressionNode(t *testing.T) {
 			expetedPrecedense: -1,
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "invalid",
@@ -841,11 +882,19 @@ func TestNewExpressionNode(t *testing.T) {
 			}
 
 			response, err := newExpressionNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -888,7 +937,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "age IS NOT NULL",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "equal",
@@ -899,7 +948,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "age = 5",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "as",
@@ -910,7 +959,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "age AS date",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "as_n_equal",
@@ -923,7 +972,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "age AS date != 'kevin'",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_prefix",
@@ -933,7 +982,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "!=",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_infix",
@@ -943,7 +992,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "name 'kevin'",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_suffix",
@@ -953,7 +1002,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "name =",
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "invalid",
@@ -974,11 +1023,19 @@ func TestNewOperationNode(t *testing.T) {
 			}
 
 			node, err := newOperatorNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -1020,7 +1077,7 @@ func TestNewCastNode(t *testing.T) {
 				"identifier",
 			},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "id" } } },
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_as",
@@ -1077,11 +1134,19 @@ func TestNewCastNode(t *testing.T) {
 			}
 
 			response, err := newCastNode(parser, &fieldNode)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -1129,7 +1194,7 @@ func TestNewFuncNode(t *testing.T) {
 				"now()",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func_infix",
@@ -1147,7 +1212,7 @@ func TestNewFuncNode(t *testing.T) {
 				"CONCAT(name, 'kevin', 12)",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "invalid",
@@ -1182,11 +1247,19 @@ func TestNewFuncNode(t *testing.T) {
 			}
 
 			node, err := newFuncNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -1222,7 +1295,7 @@ func TestNewListNode(t *testing.T) {
 				"age",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "string",
@@ -1239,7 +1312,7 @@ func TestNewListNode(t *testing.T) {
 				"'kevin'",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "numer",
@@ -1256,7 +1329,7 @@ func TestNewListNode(t *testing.T) {
 				"1",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func",
@@ -1275,7 +1348,7 @@ func TestNewListNode(t *testing.T) {
 				"name",
 			},
 			expectedTable: nil,
-			expectedErrorCode: 0,
+			expectedErrorCode: -1,
 		},
 		{
 			name: "no_start",
@@ -1321,11 +1394,19 @@ func TestNewListNode(t *testing.T) {
 			}
 
 			node, err := newListNode(parser)
-			if errType, ok := errors.AsType[*Error](err); ok && test.expectedErrorCode != errType.code {
-				t.Fatalf("unexpected err, %v got %v", test.expectedErrorCode, err)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if test.expectedErrorCode != 0 {
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 

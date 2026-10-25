@@ -46,7 +46,7 @@ var (
 
 		INVALID_STRING:								"String is not correctly formatted, add termination (INVALID_STRING)",
 		INVALID_LIST_FORMAT:					"Invalid list format (INVALID_LIST_FORMAT)",
-		INVALID_FIELD:								"Unexpected token type while trying to parse field 8INVALID_FIELD)",
+		INVALID_FIELD:								"Unexpected token type while trying to parse field (INVALID_FIELD)",
 		INVALID_TYPE_FOR_PRECEDENCE:	"Invalid token type for expression, no precedence set (INVALID_TYPE_FOR_PRECEDENCE)",
 		INVALID_END_OF_STATEMENT:			"Statement is invalidly ended (INVALID_END_OF_STATEMENT)",
 		INVALID_BASE_NODE_TYPE:				"Base node type in not valid (INVALID_BASE_NODE_TYPE)",

@@ -8,25 +8,6 @@ type Token struct {
 	End					int
 }
 
-func NewToken(t TokenType, text string, lexer *Lexer) Token {
-	endPos := lexer.currentChar
-
-	// removing the string marker as it's ignored in the string
-	if t == STRING {
-		endPos = endPos - 1
-	}
-
-	startPos := endPos - len(text)
-
-	return Token{ 
-		Type: t,
-		Text: text,
-		LineNumber: lexer.currentLine,
-		Start: startPos,
-		End: endPos,
-	}
-}
-
 func (t Token) isField() bool {
 	switch t.Type {
 	case FIELD:
@@ -97,6 +78,7 @@ const (
 
 	// Delimitor
 	SEMICOL		TokenType = "SEMICOL"								// ;
+	COMMA			TokenType = "COMMA"									// ,
 	L_PARAN		TokenType = "L_PARAN"								// (
 	R_PARAN		TokenType = "R_PARAN"								// )
 
@@ -120,6 +102,7 @@ const (
 var precedenceMap = map[TokenType]int{
 	EOF: -1,
 	SEMICOL: -1,
+	COMMA: -1,
 
 	INSERT: -1,
 	SELECT: -1,

@@ -275,11 +275,14 @@ func TestParseSql(t *testing.T) {
 				t.Fatalf("unexpected error, %v", err)
 			}
 
-			if ok && typedErr.Code() != test.expectedErrorCode {
-				t.Fatalf("unexpected error code, %v got %v", test.expectedErrorCode, typedErr.Code())
-			}
-
 			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
 				return
 			}
 
@@ -369,43 +372,34 @@ func TestParseQueryTable(t *testing.T) {
 		name							string
 		sql								string
 		expectedResponse	string
-		expectedError			error
 	} {
 		{
 			name: "insert",
 			sql: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
 			expectedResponse: "users",
-			expectedError: nil,
 		},
 		{
 			name: "select",
 			sql: "SELECT name, age FROM users WHERE id = 1;",
 			expectedResponse: "users",
-			expectedError: nil,
 		},
 		{
 			name: "update",
 			sql: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
 			expectedResponse: "users",
-			expectedError: nil,
 		},
 		{
 			name: "delete",
 			sql: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: "users",
-			expectedError: nil,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != test.expectedError {
-				t.Fatalf("unexpected error while parsing, %v got %v", test.expectedError, err)
-			}
-
-			if test.expectedError != nil {
-				return
+			if err := parser.ParseSql(test.sql); err != nil {
+				t.Fatalf("unexpected error while parsing, %v", err)
 			}
 
 			if treeLen := len(parser.trees); treeLen != 1 {
@@ -425,7 +419,6 @@ func TestParseQueryColumns(t *testing.T) {
 		name							string
 		sql								string
 		expectedResponse	[]string
-		expectedError			error
 	} {
 		{
 			name: "insert",
@@ -435,7 +428,6 @@ func TestParseQueryColumns(t *testing.T) {
 				"age",
 				"email",
 			},
-			expectedError: nil,
 		},
 		{
 			name: "select",
@@ -444,31 +436,24 @@ func TestParseQueryColumns(t *testing.T) {
 				"name",
 				"age",
 			},
-			expectedError: nil,
 		},
 		{
 			name: "update",
 			sql: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
 			expectedResponse: []string{},
-			expectedError: nil,
 		},
 		{
 			name: "delete",
 			sql: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: []string{},
-			expectedError: nil,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != test.expectedError {
-				t.Fatalf("unexpected error while parsing, %v got %v", test.expectedError, err)
-			}
-
-			if test.expectedError != nil {
-				return
+			if err := parser.ParseSql(test.sql); err != nil {
+				t.Fatalf("unexpected error while parsing, %v", err)
 			}
 
 			if treeLen := len(parser.trees); treeLen != 1 {
@@ -489,39 +474,30 @@ func TestParseQueryToString(t *testing.T) {
 	tests := []struct{
 		name							string
 		sql								string
-		expectedError			error
 	} {
 		{
 			name: "insert",
 			sql: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
-			expectedError: nil,
 		},
 		{
 			name: "select",
 			sql: "SELECT name, age FROM users WHERE name LIKE '%kev%' AND age < 30;",
-			expectedError: nil,
 		},
 		{
 			name: "update",
 			sql: "UPDATE users SET age = 26 WHERE id = 1;",
-			expectedError: nil,
 		},
 		{
 			name: "delete",
 			sql: "DELETE FROM users WHERE id = 1;",
-			expectedError: nil,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != test.expectedError {
-				t.Fatalf("unexpected error while parsing, %v got %v", test.expectedError, err)
-			}
-
-			if test.expectedError != nil {
-				return
+			if err := parser.ParseSql(test.sql); err != nil {
+				t.Fatalf("unexpected error while parsing, %v", err)
 			}
 
 			if treeLen := len(parser.trees); treeLen != 1 {

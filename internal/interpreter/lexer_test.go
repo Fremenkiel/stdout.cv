@@ -175,6 +175,15 @@ func TestNext(t *testing.T) {
 			expectedErrorCharStartNumber: -1,
 			expectedErrorCharEndNumber: -1,
 		},
+		{
+			name: "field_with_wildcard",
+			query: "*test",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_FIELD,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 1,
+			expectedErrorCharEndNumber: 2,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -183,7 +192,16 @@ func TestNext(t *testing.T) {
 
 			response, err := lexer.Next()
 
-			if typedErr, ok := errors.AsType[*Error](err); ok {
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
+			}
+
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
 				if test.expectedErrorCode != typedErr.code {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
@@ -200,13 +218,6 @@ func TestNext(t *testing.T) {
 				if test.expectedErrorCharEndNumber != errEndCn {
 					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
-			}
-
-			if err != nil && test.expectedErrorCode == -1 {
-				t.Fatal(err)
-			}
-
-			if test.expectedErrorCode != -1 {
 				return
 			}
     	
@@ -344,7 +355,16 @@ func TestNextNumber(t *testing.T) {
 
 			response, err := lexer.nextNumber(b)
 
-			if typedErr, ok := errors.AsType[*Error](err); ok {
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
+			}
+
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
 				if test.expectedErrorCode != typedErr.code {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
@@ -361,13 +381,6 @@ func TestNextNumber(t *testing.T) {
 				if test.expectedErrorCharEndNumber != errEndCn {
 					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
-			}
-
-			if err != nil && test.expectedErrorCode == -1 {
-				t.Fatal(err)
-			}
-
-			if test.expectedErrorCode != -1 {
 				return
 			}
     	
@@ -451,7 +464,16 @@ func TestNextString(t *testing.T) {
 
 			response, err := lexer.nextString()
 
-			if typedErr, ok := errors.AsType[*Error](err); ok {
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
+			}
+
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
 				if test.expectedErrorCode != typedErr.code {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
@@ -468,13 +490,6 @@ func TestNextString(t *testing.T) {
 				if test.expectedErrorCharEndNumber != errEndCn {
 					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
-			}
-
-			if err != nil && test.expectedErrorCode == -1 {
-				t.Fatal(err)
-			}
-
-			if test.expectedErrorCode != -1 {
 				return
 			}
     	
@@ -584,7 +599,16 @@ func TestNextKeyword(t *testing.T) {
 
 			response, err := lexer.nextKeyword(b)
 
-			if typedErr, ok := errors.AsType[*Error](err); ok {
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
+			}
+
+			if test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
 				if test.expectedErrorCode != typedErr.code {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
@@ -601,13 +625,6 @@ func TestNextKeyword(t *testing.T) {
 				if test.expectedErrorCharEndNumber != errEndCn {
 					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
-			}
-
-			if err != nil && test.expectedErrorCode == -1 {
-				t.Fatal(err)
-			}
-
-			if test.expectedErrorCode != -1 {
 				return
 			}
     	

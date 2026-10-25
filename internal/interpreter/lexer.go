@@ -50,64 +50,51 @@ func (l *Lexer) Next() (Token, error) {
 		c, err = l.readByte()
 		if err != nil {
 			if err == io.EOF {
-				return NewToken(EOF, "", l), nil
+				return l.newToken(EOF, ""), nil
 			}
 			return Token{}, err
 		}
 
-		if l.isComment(c) {
-			err := l.skipUntilEOL()
-			if err != nil {
-				if err == io.EOF {
-					return NewToken(EOF, "", l), nil
-				}
-				return Token{}, err
+		switch {
+		case c == '-' && l.peakByte() == '-':
+			err := l.skipLine()
+			if err == io.EOF {
+				return l.newToken(EOF, ""), nil
 			}
-
+			continue
+		case isLineBreak(c): 
 			l.addLineCount()
 			continue
-		}
-
-		if l.isLineBreak(c) {
-			l.addLineCount()
+		case isWhiteSpace(c):
 			continue
-		}
-
-		if l.isWhiteSpaceOrSeperatorChar(c) {
-			continue
-		}
-
-		if l.isInt(c) {
+		case isInt(c):
 			return l.nextNumber(c)
-		}
-
-		if l.isStringMarker(c) {
+		case isStringMarker(c):
 			return l.nextString()
-		}
-
-		switch c {
-		case ';':
-			return NewToken(SEMICOL, string(c), l), nil
-		case '(':
-			return NewToken(L_PARAN, string(c), l), nil
-		case ')':
-			return NewToken(R_PARAN, string(c), l), nil
-		case '>':
+		case c == ',':
+			return l.newToken(COMMA, string(c)), nil
+		case c == ';':
+			return l.newToken(SEMICOL, string(c)), nil
+		case c == '(':
+			return l.newToken(L_PARAN, string(c)), nil
+		case c == ')':
+			return l.newToken(R_PARAN, string(c)), nil
+		case c == '>':
 			if l.peakByte() == '=' {
 				b, _ := l.readByte()
-				return NewToken(GT_EQUAL, string([]byte{c, b}), l), nil
+				return l.newToken(GT_EQUAL, string([]byte{c, b})), nil
 			}
-			return NewToken(G_THAN, string(c), l), nil
-		case '<':
+			return l.newToken(G_THAN, string(c)), nil
+		case c == '<':
 			if l.peakByte() == '=' {
 				b, _ := l.readByte()
-				return NewToken(LT_EQUAL, string([]byte{c, b}), l), nil
+				return l.newToken(LT_EQUAL, string([]byte{c, b})), nil
 			}
-			return NewToken(L_THAN, string(c), l), nil
-		case '!':
+			return l.newToken(L_THAN, string(c)), nil
+		case c == '!':
 			if l.peakByte() == '=' {
 				b, _ := l.readByte()
-				return NewToken(N_EQUAL, string([]byte{c, b}), l), nil
+				return l.newToken(N_EQUAL, string([]byte{c, b})), nil
 			}
 			return Token{}, NewError(
 				INVALID_QUERY,
@@ -115,11 +102,12 @@ func (l *Lexer) Next() (Token, error) {
 				l.currentChar,
 				string(c),
 				)
-		case '=':
-			return NewToken(EQUAL, string(c), l), nil
+		case c == '=':
+			return l.newToken(EQUAL, string(c)), nil
+		default:
+			return l.nextKeyword(c)
 		}
 
-		return l.nextKeyword(c)
 	}
 }
 
@@ -130,7 +118,7 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 	var p byte
 	for {
 		p = l.peakByte()
-		if l.isSeperatorChar(p) {
+		if isSeperatorChar(p) {
 			break
 		}
 
@@ -139,7 +127,7 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 			break
 		}
 
-		if !l.isNumber(b) {
+		if !isNumber(b) {
 			cStr := string(append(num, b))
 			return Token{}, NewError(
 				INVALID_QUERY_LEX_NUMBER,
@@ -179,14 +167,14 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 		}
 	}
 
-	return NewToken(NUMBER, str, l), nil
+	return l.newToken(NUMBER, str), nil
 }
 
 func (l *Lexer) nextString() (Token, error) {
 	str, err := l.readUntilEndOfString()
 	if err != nil {
 		if err == io.EOF {
-			return NewToken(EOF, "", l), nil
+			return l.newToken(EOF, ""), nil
 		}
 		return Token{}, err
 	}
@@ -197,7 +185,7 @@ func (l *Lexer) nextString() (Token, error) {
 		return Token{}, err
 	}
 
-	return NewToken(STRING, string(str), l), nil
+	return l.newToken(STRING, string(str)), nil
 }
 
 func (l *Lexer) nextKeyword(char byte) (Token, error) {
@@ -208,71 +196,28 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 	for {
 		p = l.peakByte()
 
-		if l.isSeperatorChar(p) {
-			break
-		}
-
-		switch p {
-		case '-':
-			 cStr := string(append(kw, p))
-
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_KEYWORD,
-				l.currentLine,
-				(l.currentChar + 1),
-				cStr,
-				)
-		case '!':
-			 cStr := string(append(kw, p))
-
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_KEYWORD,
-				l.currentLine,
-				(l.currentChar + 1),
-				cStr,
-				)
-		case '=':
-			 cStr := string(append(kw, p))
-
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_KEYWORD,
-				l.currentLine,
-				(l.currentChar + 1),
-				cStr,
-				)
-		case '<':
-			 cStr := string(append(kw, p))
-
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_KEYWORD,
-				l.currentLine,
-				(l.currentChar + 1),
-				cStr,
-				)
-		case '>':
-			 cStr := string(append(kw, p))
-
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_KEYWORD,
-				l.currentLine,
-				(l.currentChar + 1),
-				cStr,
-				)
-		case '(':
+		switch {
+		case p == '-':
+			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case p == '!':
+			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case p == '=':
+			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case p == '<':
+			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case p == '>':
+			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case isStringMarker(p):
+			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case isSeperatorChar(p):
 			break outerloop
-		case ')':
+		case p == '(':
 			break outerloop
-		}
+		case p == ')':
+			break outerloop
+		case p == ',':
+			break outerloop
 
-		if l.isStringMarker(p) {
-			 cStr := string(append(kw, p))
-
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_KEYWORD,
-				l.currentLine,
-				(l.currentChar + 1),
-				cStr,
-				)
 		}
 
 		b, err := l.readByte()
@@ -285,112 +230,79 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 	keyword := string(kw)
 	switch strings.ToUpper(keyword) {
 	case string(AND):
-		return NewToken(AND, keyword, l), nil
+		return l.newToken(AND, keyword), nil
 	case string(OR):
-		return NewToken(OR, keyword, l), nil
+		return l.newToken(OR, keyword), nil
 	case string(IS):
-		return NewToken(IS, keyword, l), nil
+		return l.newToken(IS, keyword), nil
 	case string(NOT):
-		return NewToken(NOT, keyword, l), nil
+		return l.newToken(NOT, keyword), nil
 	case string(LIKE):
-		return NewToken(LIKE, keyword, l), nil
+		return l.newToken(LIKE, keyword), nil
 	case string(SELECT):
-		return NewToken(SELECT, keyword, l), nil
+		return l.newToken(SELECT, keyword), nil
 	case string(UPDATE):
-		return NewToken(UPDATE, keyword, l), nil
+		return l.newToken(UPDATE, keyword), nil
 	case string(INSERT):
-		return NewToken(INSERT, keyword, l), nil
+		return l.newToken(INSERT, keyword), nil
 	case string(DELETE):
-		return NewToken(DELETE, keyword, l), nil
+		return l.newToken(DELETE, keyword), nil
 	case string(INTO):
-		return NewToken(INTO, keyword, l), nil
+		return l.newToken(INTO, keyword), nil
 	case string(FROM):
-		return NewToken(FROM, keyword, l), nil
+		return l.newToken(FROM, keyword), nil
 	case string(WHERE):
-		return NewToken(WHERE, keyword, l), nil
+		return l.newToken(WHERE, keyword), nil
 	case string(VALUES):
-		return NewToken(VALUES, keyword, l), nil
+		return l.newToken(VALUES, keyword), nil
 	case string(SET):
-		return NewToken(SET, keyword, l), nil
+		return l.newToken(SET, keyword), nil
 	case string(NULL):
-		return NewToken(NULL, keyword, l), nil
+		return l.newToken(NULL, keyword), nil
 	case string(AS):
-		return NewToken(AS, keyword, l), nil
+		return l.newToken(AS, keyword), nil
 	}
 
 	if p == '(' {
-		return NewToken(FUNC, keyword, l), nil
+		return l.newToken(FUNC, keyword), nil
 	}
 
-	return NewToken(FIELD, keyword, l), nil
+	return l.newToken(FIELD, keyword), nil
 }
 
-func (l *Lexer) isComment(c byte) bool {
-	if c != '-' {
-		return false
-	}
-	
-	if l.peakByte() != '-' {
-		return false
-	}
-
-	return true
+func (l *Lexer) newKeywordError(str string) error {
+	return NewError(
+		INVALID_QUERY_LEX_KEYWORD,
+		l.currentLine,
+		(l.currentChar + 1),
+		str,
+		)
 }
 
-func (l *Lexer) isSeperatorChar(c byte) bool {
-	return l.isWhiteSpaceOrSeperatorChar(c) || l.isEndChar(c) || l.isLineBreak(c)
-}
+func (l *Lexer) newToken(t TokenType, text string) Token {
+	endPos := l.currentChar
 
-func (l *Lexer) isWhiteSpaceOrSeperatorChar(c byte) bool {
-	switch c {
-	case ' ':
-		return true
-	case '\t':
-		return true
-	case ',':
-		return true
-	}
-	return false
-}
-
-func (l *Lexer) isEndChar(c byte) bool {
-	return c == ';'
-}
-
-func (l *Lexer) isLineBreak(c byte) bool {
-	return  c == '\n'
-}
-
-func (l *Lexer) isInt(c byte) bool {
-	if c == '-' {
-		return true
+	// removing the string marker as it's ignored in the string
+	if t == STRING {
+		endPos = endPos - 1
 	}
 
-	return l.isNumber(c)
-}
+	startPos := endPos - len(text)
 
-func (l *Lexer) isNumber(c byte) bool {
-	if c == '.' {
-		return true
+	return Token{ 
+		Type: t,
+		Text: text,
+		LineNumber: l.currentLine,
+		Start: startPos,
+		End: endPos,
 	}
-
-	c -= '0'
-	if c > 9 {
-		return false
-	}
-
-	return true
-}
-
-func (l *Lexer) isStringMarker(c byte) bool {
-	return c == '\''
 }
 
 func (l *Lexer) readUntilEndOfString() ([]byte, error) {
 	buf := make([]byte, 0, 20)
 	for {
 		p := l.peakByte()
-		if l.isStringMarker(p) {
+		if isStringMarker(p) {
 			return buf, nil
 		}
 
@@ -408,7 +320,7 @@ func (l *Lexer) readUntilEndOfString() ([]byte, error) {
 	}
 }
 
-func (l *Lexer) skipUntilEOL() error {
+func (l *Lexer) skipLine() error {
 	for {
 		b, err := l.readByte()
 		if err != nil {
@@ -416,6 +328,7 @@ func (l *Lexer) skipUntilEOL() error {
 		}
 
 		if b == '\n' {
+			l.addLineCount()
 			return nil
 		}
 	}
