@@ -40,6 +40,7 @@
   text-align: right;
   color: #999;
   white-space: nowrap;
+  line-height: 22px;
 }
 
 .CodeMirror-guttermarker { color: black; }
@@ -249,7 +250,7 @@ div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #a22;}
   margin: 0;
   white-space: pre;
   word-wrap: normal;
-  line-height: inherit;
+  line-height: 22px;
   color: inherit;
   z-index: 2;
   position: relative;

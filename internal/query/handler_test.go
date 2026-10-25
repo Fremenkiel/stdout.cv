@@ -1,0 +1,175 @@
+package query
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"testing/synctest"
+	"time"
+
+	"github.com/fremenkiel/stdout.cv/internal/session"
+	"github.com/fremenkiel/stdout.cv/internal/testutil"
+)
+
+func TestHandlerRun(t *testing.T) {
+	tests := []struct{
+		name,
+		method,
+		url											string
+		hasSession							bool
+		expectedResponseContent	[]string
+		expectedResponse				int
+	} {
+		{
+			name: "get",
+			method: http.MethodGet,
+			url: "/query?sql=select%20name%20from%20users%3B%0A",
+			hasSession: true,
+			expectedResponseContent: []string {
+				"fragment:result",
+				"test_row",
+				"test_col",
+			},
+			expectedResponse: http.StatusOK,
+		},
+		{
+			name: "get_no_query",
+			method: http.MethodGet,
+			url: "/query",
+			hasSession: true,
+			expectedResponseContent: nil,
+			expectedResponse: http.StatusNoContent,
+		},
+		{
+			name: "get_no_return",
+			method: http.MethodGet,
+			url: "/query?sql=delete%20from%20users%3B%0A",
+			hasSession: true,
+			expectedResponseContent: nil,
+			expectedResponse: http.StatusOK,
+		},
+		{
+			name: "get_no_session",
+			method: http.MethodGet,
+			url: "/query?sql=select%20name%20from%20users%3B%0A",
+			hasSession: false,
+			expectedResponseContent: nil,
+			expectedResponse: http.StatusInternalServerError,
+		},
+	}
+
+	for ti := range tests {
+		test := tests[ti]
+
+		t.Run(test.name, func(t *testing.T) {
+			ctx := t.Context()
+			if test.hasSession {
+				ctx = context.WithValue(ctx, "session_key", "test")
+			}
+
+			handler := NewHandler(
+				testutil.NewRenderer(),
+				&mockService{
+					sleep: time.Duration(0),
+				},
+				)
+
+			rr := httptest.NewRecorder()
+
+			handler.Run(
+				rr,
+				httptest.NewRequestWithContext(ctx, test.method, test.url, nil),
+				)
+
+			if test.expectedResponse != rr.Code {
+				t.Fatalf("unexpected status code, %d got %d", test.expectedResponse, rr.Code)
+			}
+
+			for _, content := range test.expectedResponseContent {
+				if !strings.Contains(rr.Body.String(), content) {
+					t.Fatalf("unexpected response body, %s got %s", content, rr.Body.String())
+				}
+			}
+		})
+	}
+}
+
+func TestHandlerRunDuration(t *testing.T) {
+	tests := []struct{
+		name,
+		method,
+		url								string
+		hasSession				bool
+		expectedDuration	time.Duration
+	} {
+		{
+			name: "get",
+			method: http.MethodGet,
+			url: "/query?sql=select%20name%20from%20users%3B%0A",
+			hasSession: true,
+			expectedDuration: time.Duration(10 * time.Microsecond),
+		},
+	}
+
+	for ti := range tests {
+		test := tests[ti]
+
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx := t.Context()
+				if test.hasSession {
+					ctx = context.WithValue(ctx, "session_key", "test")
+				}
+
+				handler := NewHandler(
+					testutil.NewRenderer(),
+					&mockService{
+						sleep: test.expectedDuration,
+					},
+					)
+
+				rr := httptest.NewRecorder()
+
+				handler.Run(
+					rr,
+					httptest.NewRequestWithContext(ctx, test.method, test.url, nil),
+					)
+
+				expectedContent := fmt.Sprintf("%v μs", test.expectedDuration.Microseconds())
+				if !strings.Contains(rr.Body.String(), expectedContent) {
+					t.Fatalf("unexpected response body, %s got %s", expectedContent, rr.Body.String())
+				}
+			})
+		})
+	}
+}
+
+type mockService struct {
+	sleep time.Duration
+}
+
+var _ service = (*mockService)(nil)
+
+func (m *mockService) Run(ctx context.Context, query string) (*Query, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	time.Sleep(m.sleep)
+
+	return &Query{
+		Rows: []*Row{
+			{
+				stringPtr("test_row"),
+			},
+		},
+		Columns: []string{
+			"test_col",
+		},
+		Duration: 765,
+	}, nil
+}

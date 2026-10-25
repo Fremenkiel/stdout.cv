@@ -6,6 +6,7 @@ body {
   --color-background-primary-hover: #eef0f4;
 
   --color-background-secondary: #f7f8fa;
+  --color-background-error: #F9E3E2;
 
   --color-active: #ebf1fd;
   --color-active-hover: #eef0f4;
@@ -14,10 +15,13 @@ body {
   --color-text-primary: #1b1f27;
   --color-text-secondary: #8a90a0;
   --color-text-contrast: #fff;
+  --color-text-error: #991B1B;
 
   --color-code-keyword: #2f6fed;
   --color-code-string: #15803d;
   --color-code-number: #b45309;
 
   --color-border: #eceef2;
+
+  --color-text-error-decoration: #DC2626;
 }

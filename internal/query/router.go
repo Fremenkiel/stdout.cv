@@ -1,4 +1,4 @@
-package row
+package query
 
 import (
 	"net/http"
@@ -7,6 +7,6 @@ import (
 )
 
 func NewRouter(mux *http.ServeMux, handler *Handler, middlewares ...func(http.Handler) http.Handler) {
-	mux.Handle("GET /rows", middleware.ChainMiddleware(middlewares...)(http.HandlerFunc(handler.GetRows)))
+	mux.Handle("GET /query", middleware.ChainMiddleware(middlewares...)(http.HandlerFunc(handler.Run)))
 }
 

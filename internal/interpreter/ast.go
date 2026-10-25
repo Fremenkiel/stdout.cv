@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
 )
 
 type Node interface {
@@ -30,10 +29,10 @@ var _ Node = (*InsertNode)(nil)
 func newInsetNode(parser *Parser) (Node, error) {
 	if parser.currentToken().Type != INSERT {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_INSERT_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", INSERT, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -46,9 +45,9 @@ func newInsetNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != INTO {
 		return nil, NewError(
-			InvalidInsertStatement,
+			INVALID_INSERT_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			string(INTO),
 			)
 	}
@@ -74,9 +73,9 @@ func newInsetNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != VALUES {
 		return nil, NewError(
-			InvalidInsertStatement,
+			INVALID_INSERT_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			string(VALUES),
 			)
 	}
@@ -140,10 +139,10 @@ var _ Node = (*SelectNode)(nil)
 func newSelectNode(parser *Parser) (Node, error) {
 	if parser.currentToken().Type != SELECT {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_SELECT_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", SELECT, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -275,10 +274,10 @@ var _ Node = (*UpdateNode)(nil)
 func newUpdateNode(parser *Parser) (Node, error) {
 	if parser.currentToken().Type != UPDATE {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_UPDATE_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", UPDATE, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -291,7 +290,7 @@ func newUpdateNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != FIELD {
 		return nil, NewError(
-			InvalidUpdateStatement,
+			INVALID_UPDATE_STATEMENT,
 			parser.currentToken().LineNumber,
 			parser.currentToken().Start,
 			"table",
@@ -307,9 +306,9 @@ func newUpdateNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != SET {
 		return nil, NewError(
-			InvalidUpdateStatement,
+			INVALID_UPDATE_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			string(SET),
 			)
 	}
@@ -322,9 +321,9 @@ func newUpdateNode(parser *Parser) (Node, error) {
 	for {
 		if parser.currentToken().Type == EOF {
 			return nil, NewError(
-				InvalidEndOfStatement,
+				INVALID_END_OF_STATEMENT,
 				parser.currentToken().LineNumber,
-				parser.currentToken().Start,
+				parser.currentToken().End,
 				";",
 				)
 		}
@@ -420,10 +419,10 @@ var _ Node = (*DeleteNode)(nil)
 func newDeleteNode(parser *Parser) (Node, error) {
 	if parser.currentToken().Type != DELETE {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_DELETE_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", DELETE, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -436,9 +435,9 @@ func newDeleteNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != FROM {
 		return nil, NewError(
-			InvalidDeleteStatement,
+			INVALID_DELETE_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			string(FROM),
 			)
 	}
@@ -508,9 +507,9 @@ var _ Node = (*FieldNode)(nil)
 func newFieldNode(parser *Parser) (Node, error) {
 	if !parser.currentToken().isField() {
 		return nil, NewError(
-			InvalidField,
+			INVALID_FIELD,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			parser.currentToken().Text,
 			)
 	}
@@ -589,9 +588,9 @@ func newExpressionNode(parser *Parser) (Node, error) {
 	precedence, ok := precedenceMap[node.Token.Type]
 	if !ok {
 		return nil, NewError(
-			InvalidTypeForPrecedence,
+			INVALID_TYPE_FOR_PRECEDENCE,
 			node.Token.LineNumber,
-			node.Token.Start,
+			node.Token.End,
 			node.Token.Text,
 			)
 	}
@@ -670,9 +669,9 @@ func newOperatorNode(parser *Parser) (Node, error) {
 
 		if !parser.currentToken().isOperator() {
 			return nil, NewError(
-				InvalidOperatiorToken,
+				INVALID_OPERATOR_TOKEN,
 				parser.currentToken().LineNumber,
-				parser.currentToken().Start,
+				parser.currentToken().End,
 				parser.currentToken().Text,
 				)
 		}
@@ -686,9 +685,9 @@ func newOperatorNode(parser *Parser) (Node, error) {
 		precedence, ok := precedenceMap[infix.Token.Type]
 		if !ok {
 			return nil, NewError(
-				InvalidTypeForPrecedence,
+				INVALID_TYPE_FOR_PRECEDENCE,
 				infix.Token.LineNumber,
-				infix.Token.Start,
+				infix.Token.End,
 				infix.Token.Text,
 				)
 		}
@@ -771,10 +770,10 @@ func newCastNode(parser *Parser, prefix Node) (Node, error) {
 
 	if parser.currentToken().Type != AS {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_BASE_NODE_TYPE,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", AS, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -836,10 +835,10 @@ func newFuncNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != FUNC {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_BASE_NODE_TYPE,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", FUNC, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -851,9 +850,9 @@ func newFuncNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != L_PARAN {
 		return nil, NewError(
-			InvalidFuncChar,
+			INVALID_FUNC_CHAR,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			"(",
 			)
 	}
@@ -878,9 +877,9 @@ func newFuncNode(parser *Parser) (Node, error) {
 
 	if parser.currentToken().Type != R_PARAN {
 		return nil, NewError(
-			InvalidFuncChar,
+			INVALID_FUNC_CHAR,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			")",
 			)
 	}
@@ -935,9 +934,9 @@ func newListNode(parser *Parser) (Node, error) {
 	var list ListNode
 	if parser.currentToken().Type != L_PARAN {
 		return nil, NewError(
-			InvalidListFormat,
+			INVALID_LIST_FORMAT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			"(",
 			)
 	}
@@ -950,9 +949,9 @@ func newListNode(parser *Parser) (Node, error) {
 	for {
 		if parser.currentToken().Type == EOF {
 			return nil, NewError(
-				InvalidListFormat,
+				INVALID_LIST_FORMAT,
 				parser.currentToken().LineNumber,
-				parser.currentToken().Start,
+				parser.currentToken().End,
 				")",
 				)
 		}
@@ -1027,10 +1026,10 @@ var _ Node = (*WhereNode)(nil)
 func newWhereNode(parser *Parser) (Node, error) {
 	if parser.currentToken().Type != WHERE {
 		return nil, NewError(
-			InvalidBaseNodeType,
+			INVALID_BASE_NODE_TYPE,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			fmt.Sprintf("expected %s got %s", WHERE, parser.currentToken().Type),
+			parser.currentToken().End,
+			parser.currentToken().Text,
 			)
 	}
 
@@ -1090,9 +1089,9 @@ func (w *WhereNode) ReturnsValue() bool {
 func consumeEndChar(parser *Parser) error {
 	if parser.currentToken().Type != SEMICOL {
 		return NewError(
-			InvalidEndOfStatement,
+			INVALID_END_OF_STATEMENT,
 			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
+			parser.currentToken().End,
 			";",
 			)
 	}

@@ -23,8 +23,8 @@ func ParseSqliteError(err error) (*Error, bool) {
 			sqlite3.SQLITE_TOOBIG,
 			sqlite3.SQLITE_WARNING:
 			return &Error{
-				Title: "SQL query error",
 				Message: sqliteError.Error(),
+				Code: sqlite.ErrorCodeString[sqliteError.Code()],
 			}, true
 		}
 	}

@@ -37,7 +37,7 @@ func (l *Lexer) Write(str string) {
 func (l *Lexer) Next() (Token, error) {
 	if l.len == -1 {
 		return Token{}, NewError(
-			NoQuery, 
+			NO_QUERY, 
 			-1,
 			-1, 
 			"",
@@ -110,9 +110,9 @@ func (l *Lexer) Next() (Token, error) {
 				return NewToken(N_EQUAL, string([]byte{c, b}), l), nil
 			}
 			return Token{}, NewError(
-				InvalidQuery,
+				INVALID_QUERY,
 				l.currentLine,
-				l.currentChar - 1,
+				l.currentChar,
 				string(c),
 				)
 		case '=':
@@ -142,9 +142,9 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 		if !l.isNumber(b) {
 			cStr := string(append(num, b))
 			return Token{}, NewError(
-				InvalidQueryLexNumber,
+				INVALID_QUERY_LEX_NUMBER,
 				l.currentLine,
-				l.currentChar - len(cStr),
+				l.currentChar,
 				cStr,
 				)
 		}
@@ -162,18 +162,18 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 	case false:
 		if _, err := strconv.ParseInt(str, 0, 0); err != nil {
 			return Token{}, NewError(
-				InvalidQueryLexNumber,
+				INVALID_QUERY_LEX_NUMBER,
 				l.currentLine,
-				l.currentChar - len(str),
+				l.currentChar,
 				str,
 				)
 		}
 	case true:
 		if _, err := strconv.ParseFloat(str, 64); err != nil {
 			return Token{}, NewError(
-				InvalidQueryLexNumber,
+				INVALID_QUERY_LEX_NUMBER,
 				l.currentLine,
-				l.currentChar - len(str),
+				l.currentChar,
 				str,
 				)
 		}
@@ -217,45 +217,45 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 			 cStr := string(append(kw, p))
 
 			return Token{}, NewError(
-				InvalidQueryLexKeyword,
+				INVALID_QUERY_LEX_KEYWORD,
 				l.currentLine,
-				(l.currentChar + 1) - len(cStr),
+				(l.currentChar + 1),
 				cStr,
 				)
 		case '!':
 			 cStr := string(append(kw, p))
 
 			return Token{}, NewError(
-				InvalidQueryLexKeyword,
+				INVALID_QUERY_LEX_KEYWORD,
 				l.currentLine,
-				(l.currentChar + 1) - len(cStr),
-				string(append(kw, p)),
+				(l.currentChar + 1),
+				cStr,
 				)
 		case '=':
 			 cStr := string(append(kw, p))
 
 			return Token{}, NewError(
-				InvalidQueryLexKeyword,
+				INVALID_QUERY_LEX_KEYWORD,
 				l.currentLine,
-				(l.currentChar + 1) - len(cStr),
+				(l.currentChar + 1),
 				cStr,
 				)
 		case '<':
 			 cStr := string(append(kw, p))
 
 			return Token{}, NewError(
-				InvalidQueryLexKeyword,
+				INVALID_QUERY_LEX_KEYWORD,
 				l.currentLine,
-				(l.currentChar + 1) - len(cStr),
+				(l.currentChar + 1),
 				cStr,
 				)
 		case '>':
 			 cStr := string(append(kw, p))
 
 			return Token{}, NewError(
-				InvalidQueryLexKeyword,
+				INVALID_QUERY_LEX_KEYWORD,
 				l.currentLine,
-				(l.currentChar + 1) - len(cStr),
+				(l.currentChar + 1),
 				cStr,
 				)
 		case '(':
@@ -268,9 +268,9 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 			 cStr := string(append(kw, p))
 
 			return Token{}, NewError(
-				InvalidQueryLexKeyword,
+				INVALID_QUERY_LEX_KEYWORD,
 				l.currentLine,
-				(l.currentChar + 1) - len(cStr),
+				(l.currentChar + 1),
 				cStr,
 				)
 		}
@@ -397,9 +397,9 @@ func (l *Lexer) readUntilEndOfString() ([]byte, error) {
 		b, err := l.readByte()
 		if err != nil {
 			return nil, NewError(
-				InvalidString,
+				INVALID_STRING,
 				l.currentLine,
-				l.currentChar - 1,
+				l.currentChar,
 				string(buf),
 				)
 		}

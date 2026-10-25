@@ -1,10 +1,11 @@
-package row
+package query
 
 import (
 	"context"
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/interpreter"
 	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
@@ -17,38 +18,44 @@ type Renderer interface {
 	RenderFragment(w http.ResponseWriter, name string, data any) error
 }
 
-type RowService interface {
-	GetRows(ctx context.Context, query string) (*Result, error)
+type service interface {
+	Run(ctx context.Context, sql string) (*Query, error)
 }
 
 type Handler struct {
 	renderer	Renderer
-	service		RowService
+	service		service
 }
 
-func NewHandler(r Renderer, s RowService) *Handler {
+func NewHandler(r Renderer, s service) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 
-func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	query := r.URL.Query().Get("query")
-	if len(query) == 0 {
+	sql := r.URL.Query().Get("sql")
+	if len(sql) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	result, err := h.service.GetRows(ctx, query)
+	start := time.Now()
+
+	result, err := h.service.Run(ctx, sql)
 	if err != nil {
 		if typedErr, ok := errors.AsType[*interpreter.Error](err); ok {
-			w.WriteHeader(http.StatusUnprocessableEntity)
+			ln, csn, cen := typedErr.Pos()
 			libErr := &lib.Error{
-				Title: "Error",
 				Message: typedErr.Error(),
-				Code: int(typedErr.Code()),
+				Code: interpreter.ErrorCodeString[typedErr.Code()],
+				Duration: time.Now().UnixMicro() - start.UnixMicro(),
+				LineNumber: ln,
+				CharStartNumber: csn,
+				CharEndNumber: cen,
 			}
-			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
 				logger.LogError(
 					"row/handler",
 					"error returned while rendering error container",
@@ -59,8 +66,9 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if libErr, ok := lib.ParseSqliteError(err); ok {
+			libErr.Duration =time.Now().UnixMicro() - start.UnixMicro()
 			w.WriteHeader(http.StatusUnprocessableEntity)
-			if err = h.renderer.RenderFragment(w, "error-container-swap", libErr); err != nil {
+			if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
 				logger.LogError(
 					"row/handler",
 					"error returned while rendering error container",
@@ -75,7 +83,19 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 			"error returned while getting rows",
 			slog.Any("error", err),
 			)
+		libErr := &lib.Error{
+			Message: err.Error(),
+			Code: "INTERNAL_SERVER_ERROR",
+			Duration: time.Now().UnixMicro() - start.UnixMicro(),
+		}
 		w.WriteHeader(http.StatusInternalServerError)
+		if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
+			logger.LogError(
+				"row/handler",
+				"error returned while rendering error container",
+				slog.Any("error", err),
+				)
+		}
 		return
 	}
 
@@ -89,6 +109,7 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result.Duration = time.Now().UnixMicro() - start.UnixMicro()
 	viewData := h.getResultViewData(result)
 
 	if err := h.renderer.RenderFragment(w, "result", viewData); err != nil {
@@ -101,7 +122,7 @@ func (h *Handler) GetRows(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getResultViewData(result *Result) *viewmodels.ResultViewData {
+func (h *Handler) getResultViewData(result *Query) *viewmodels.ResultViewData {
 	viewData := &viewmodels.ResultViewData{
 		Stats: &viewmodels.Stats{
 			RowCount: uint16(len(result.Rows)),

@@ -1,7 +1,10 @@
 package lib
 
 type Error struct {
-	Title		string
-	Message	string
-	Code		int
+	Message					string
+	Code						string
+	Duration				int64
+	LineNumber			int
+	CharStartNumber int
+	CharEndNumber 	int
 }

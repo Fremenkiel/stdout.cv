@@ -12,6 +12,7 @@
 
 /* components */
 @import url("./components/_button.css");
+@import url("./components/_error.css");
 @import url("./components/_header.css");
 @import url("./components/_nav.css");
 @import url("./components/_result.css");

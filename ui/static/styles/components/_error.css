@@ -1,0 +1,3 @@
+.error-line .CodeMirror-linenumber {
+  color: var(--color-text-error-decoration);
+}

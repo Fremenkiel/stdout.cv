@@ -23,9 +23,9 @@ func NewParser() *Parser {
 	return parser
 }
 
-func (p *Parser) ParseQuery(query string) error {
+func (p *Parser) ParseSql(sql string) error {
 	p.trees = make([]Node, 0, 1)
-	p.lexer.Write(query)
+	p.lexer.Write(sql)
 	p.r = 0
 
 	for {
@@ -49,9 +49,9 @@ func (p *Parser) ParseQuery(query string) error {
 		handler, ok := p.handlers[p.currentToken().Type]
 		if !ok {
 			return NewError(
-				UnsupportedQuery,
+				UNSUPPORTED_QUERY,
 				p.currentToken().LineNumber,
-				p.currentToken().Start,
+				p.currentToken().End,
 				p.currentToken().Text,
 				)
 		}
@@ -104,9 +104,9 @@ func (p *Parser) expressionParse(basePrecedence int) (Node, error) {
 		operatorPrecedence, ok := precedenceMap[operator.Type]
 		if !ok {
 			return nil, NewError(
-				InvalidTypeForPrecedence,
+				INVALID_TYPE_FOR_PRECEDENCE,
 				operator.LineNumber,
-				operator.Start,
+				operator.End,
 				operator.Text,
 				)
 		}
@@ -157,9 +157,9 @@ func (p *Parser) currentToken() Token {
 func (p *Parser) nextToken() error {
 	if p.r >= len(p.tokens) - 1 {
 		return NewError(
-			UnexpectedEOF,
+			UNEXPECTED_EOF,
 			p.currentToken().LineNumber,
-			p.currentToken().Start,
+			p.currentToken().End,
 			p.currentToken().Text,
 			)
 

@@ -1,6 +1,6 @@
-package row
+package query
 
-type Result struct {
+type Query struct {
 	Rows			[]*Row
 	Columns		[]string
 	Duration	int64

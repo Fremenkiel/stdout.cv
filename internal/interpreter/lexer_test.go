@@ -77,12 +77,13 @@ func TestLexer(t *testing.T) {
 
 func TestNext(t *testing.T) {
 	tests := []struct{
-		name											string
-		query											string
-		expectedResponse  				Token
-		expectedErrorCode 				ErrorCode
-		expectedErrorLineNumber		int
-		expectedErrorCharNumber		int
+		name													string
+		query													string
+		expectedResponse  						Token
+		expectedErrorCode 						ErrorCode
+		expectedErrorLineNumber				int
+		expectedErrorCharStartNumber	int
+		expectedErrorCharEndNumber		int
 	} {
 		{
 			name: "keyword",
@@ -90,7 +91,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: SELECT, Text: "SeLeCt" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "string",
@@ -98,7 +100,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: STRING, Text: "test" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "number",
@@ -106,7 +109,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "-12" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "field",
@@ -114,15 +118,17 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: FIELD, Text: "users" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "invalid_field",
 			query: "user--test",
 			expectedResponse: Token{},
-			expectedErrorCode: InvalidQueryLexKeyword,
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharNumber: 0,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 5,
 		},
 		{
 			name: "left_paran",
@@ -130,7 +136,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: L_PARAN, Text: "(" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "less_than",
@@ -138,7 +145,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: L_THAN, Text: "<" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "less_than_or_equal",
@@ -146,7 +154,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: LT_EQUAL, Text: "<=" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "line_break",
@@ -154,7 +163,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: EOF, Text: "" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "comment",
@@ -162,7 +172,8 @@ func TestNext(t *testing.T) {
 			expectedResponse: Token{ Type: EOF, Text: "" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 	}
 	for _, test := range tests {
@@ -177,13 +188,17 @@ func TestNext(t *testing.T) {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
 
-				errLn, errCn := typedErr.Pos()
+				errLn, errStartCn, errEndCn := typedErr.Pos()
 				if test.expectedErrorLineNumber != errLn {
 					t.Fatalf("unexpected error line number, %v got %v", test.expectedErrorLineNumber, errLn)
 				}
 
-				if test.expectedErrorCharNumber != errCn {
-					t.Fatalf("unexpected error char number, %v got %v", test.expectedErrorCharNumber, errCn)
+				if test.expectedErrorCharStartNumber != errStartCn {
+					t.Fatalf("unexpected error char start number, %v got %v", test.expectedErrorCharStartNumber, errStartCn)
+				}
+
+				if test.expectedErrorCharEndNumber != errEndCn {
+					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
 			}
 
@@ -214,7 +229,7 @@ func TestNextNoQuery(t *testing.T) {
 	} {
 		{
 			name: "no_query",
-			expectedErrorCode: NoQuery,
+			expectedErrorCode: NO_QUERY,
 		},
 	}
 	for _, test := range tests {
@@ -236,12 +251,13 @@ func TestNextNoQuery(t *testing.T) {
 
 func TestNextNumber(t *testing.T) {
 	tests := []struct{
-		name							string
-		query							string
-		expectedResponse  Token
-		expectedErrorCode 				ErrorCode
-		expectedErrorLineNumber		int
-		expectedErrorCharNumber		int
+		name													string
+		query													string
+		expectedResponse  						Token
+		expectedErrorCode 						ErrorCode
+		expectedErrorLineNumber				int
+		expectedErrorCharStartNumber	int
+		expectedErrorCharEndNumber		int
 	} {
 		{
 			name: "number",
@@ -249,7 +265,8 @@ func TestNextNumber(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "12" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "negative_number",
@@ -257,15 +274,17 @@ func TestNextNumber(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "-12" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "invalid_negative_number",
 			query: "1-2",
 			expectedResponse: Token{},
-			expectedErrorCode: InvalidQueryLexNumber,
+			expectedErrorCode: INVALID_QUERY_LEX_NUMBER,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharNumber: 0,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 2,
 		},
 		{
 			name: "float",
@@ -273,15 +292,17 @@ func TestNextNumber(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "14.23" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "invalid_float",
 			query: "14.2.3",
 			expectedResponse: Token{},
-			expectedErrorCode: InvalidQueryLexNumber,
+			expectedErrorCode: INVALID_QUERY_LEX_NUMBER,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharNumber: 0,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 6,
 		},
 		{
 			name: "line_break",
@@ -289,7 +310,8 @@ func TestNextNumber(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "14", },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "comma",
@@ -297,7 +319,8 @@ func TestNextNumber(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "14", },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "semi_col",
@@ -305,7 +328,8 @@ func TestNextNumber(t *testing.T) {
 			expectedResponse: Token{ Type: NUMBER, Text: "14", },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 	}
 	for _, test := range tests {
@@ -325,13 +349,17 @@ func TestNextNumber(t *testing.T) {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
 
-				errLn, errCn := typedErr.Pos()
+				errLn, errStartCn, errEndCn := typedErr.Pos()
 				if test.expectedErrorLineNumber != errLn {
 					t.Fatalf("unexpected error line number, %v got %v", test.expectedErrorLineNumber, errLn)
 				}
 
-				if test.expectedErrorCharNumber != errCn {
-					t.Fatalf("unexpected error char number, %v got %v", test.expectedErrorCharNumber, errCn)
+				if test.expectedErrorCharStartNumber != errStartCn {
+					t.Fatalf("unexpected error char start number, %v got %v", test.expectedErrorCharStartNumber, errStartCn)
+				}
+
+				if test.expectedErrorCharEndNumber != errEndCn {
+					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
 			}
 
@@ -356,12 +384,13 @@ func TestNextNumber(t *testing.T) {
 
 func TestNextString(t *testing.T) {
 	tests := []struct{
-		name							string
-		query							string
-		expectedResponse  Token
-		expectedErrorCode 				ErrorCode
-		expectedErrorLineNumber		int
-		expectedErrorCharNumber		int
+		name													string
+		query													string
+		expectedResponse  						Token
+		expectedErrorCode 						ErrorCode
+		expectedErrorLineNumber				int
+		expectedErrorCharStartNumber	int
+		expectedErrorCharEndNumber		int
 	} {
 		{
 			name: "normal",
@@ -369,15 +398,17 @@ func TestNextString(t *testing.T) {
 			expectedResponse: Token{ Type: STRING, Text: "test" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "no_end_char",
 			query: "'test",
 			expectedResponse: Token{},
-			expectedErrorCode: InvalidString,
+			expectedErrorCode: INVALID_STRING,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharNumber: 4,
+			expectedErrorCharStartNumber: 1,
+			expectedErrorCharEndNumber: 5,
 		},
 		{
 			name: "rand_char",
@@ -385,7 +416,8 @@ func TestNextString(t *testing.T) {
 			expectedResponse: Token{ Type: STRING, Text: "4&€g_*^2ı}!$?`#" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "line_break",
@@ -393,7 +425,8 @@ func TestNextString(t *testing.T) {
 			expectedResponse: Token{ Type: STRING, Text: "test\ntest" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "semi_col",
@@ -401,7 +434,8 @@ func TestNextString(t *testing.T) {
 			expectedResponse: Token{ Type: STRING, Text: "test;test" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 	}
 	for _, test := range tests {
@@ -422,13 +456,17 @@ func TestNextString(t *testing.T) {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
 
-				errLn, errCn := typedErr.Pos()
+				errLn, errStartCn, errEndCn := typedErr.Pos()
 				if test.expectedErrorLineNumber != errLn {
 					t.Fatalf("unexpected error line number, %v got %v", test.expectedErrorLineNumber, errLn)
 				}
 
-				if test.expectedErrorCharNumber != errCn {
-					t.Fatalf("unexpected error char number, %v got %v", test.expectedErrorCharNumber, errCn)
+				if test.expectedErrorCharStartNumber != errStartCn {
+					t.Fatalf("unexpected error char start number, %v got %v", test.expectedErrorCharStartNumber, errStartCn)
+				}
+
+				if test.expectedErrorCharEndNumber != errEndCn {
+					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
 			}
 
@@ -453,12 +491,13 @@ func TestNextString(t *testing.T) {
 
 func TestNextKeyword(t *testing.T) {
 	tests := []struct{
-		name							string
-		query							string
-		expectedResponse  Token
-		expectedErrorCode 				ErrorCode
-		expectedErrorLineNumber		int
-		expectedErrorCharNumber		int
+		name													string
+		query													string
+		expectedResponse  						Token
+		expectedErrorCode 						ErrorCode
+		expectedErrorLineNumber				int
+		expectedErrorCharStartNumber	int
+		expectedErrorCharEndNumber		int
 	} {
 		{
 			name: "select",
@@ -466,7 +505,8 @@ func TestNextKeyword(t *testing.T) {
 			expectedResponse: Token{ Type: SELECT, Text: "select" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "test_field",
@@ -474,7 +514,8 @@ func TestNextKeyword(t *testing.T) {
 			expectedResponse: Token{ Type: FIELD, Text: "test" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "func",
@@ -482,23 +523,26 @@ func TestNextKeyword(t *testing.T) {
 			expectedResponse: Token{ Type: FUNC, Text: "now" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "comment_in_field",
 			query: "users--test ",
 			expectedResponse: Token{},
-			expectedErrorCode: InvalidQueryLexKeyword,
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharNumber: 0,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 6,
 		},
 		{
 			name: "string_term",
 			query: "users'test ",
 			expectedResponse: Token{},
-			expectedErrorCode: InvalidQueryLexKeyword,
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharNumber: 0,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 6,
 		},
 		{
 			name: "line_break",
@@ -506,7 +550,8 @@ func TestNextKeyword(t *testing.T) {
 			expectedResponse: Token{ Type: FIELD, Text: "users" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "comma",
@@ -514,7 +559,8 @@ func TestNextKeyword(t *testing.T) {
 			expectedResponse: Token{ Type: FIELD, Text: "users" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 		{
 			name: "semi_col",
@@ -522,7 +568,8 @@ func TestNextKeyword(t *testing.T) {
 			expectedResponse: Token{ Type: FIELD, Text: "users" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
-			expectedErrorCharNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
 		},
 	}
 	for _, test := range tests {
@@ -542,13 +589,17 @@ func TestNextKeyword(t *testing.T) {
 					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
 				}
 
-				errLn, errCn := typedErr.Pos()
+				errLn, errStartCn, errEndCn := typedErr.Pos()
 				if test.expectedErrorLineNumber != errLn {
 					t.Fatalf("unexpected error line number, %v got %v", test.expectedErrorLineNumber, errLn)
 				}
 
-				if test.expectedErrorCharNumber != errCn {
-					t.Fatalf("unexpected error char number, %v got %v", test.expectedErrorCharNumber, errCn)
+				if test.expectedErrorCharStartNumber != errStartCn {
+					t.Fatalf("unexpected error char start number, %v got %v", test.expectedErrorCharStartNumber, errStartCn)
+				}
+
+				if test.expectedErrorCharEndNumber != errEndCn {
+					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
 				}
 			}
 

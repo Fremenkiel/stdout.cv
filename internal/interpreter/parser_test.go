@@ -1,16 +1,20 @@
 package interpreter
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
-func TestParseQuery(t *testing.T) {
+func TestParseSql(t *testing.T) {
 	tests := []struct{
-		name						string
-		query						string
-		expectedTokens	[]Token
+		name							string
+		sql								string
+		expectedTokens		[]Token
+		expectedErrorCode ErrorCode
 	} {
 		{
 			name: "insert",
-			query: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
+			sql: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
 			expectedTokens: []Token{
 				{ Type: INSERT, Text: "INSERT" },
 				{ Type: INTO, Text: "INTO" },
@@ -27,10 +31,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "select",
-			query: "SELECT name, age, email FROM users WHERE id = 1 AND name LIKE '%kevin%';",
+			sql: "SELECT name, age, email FROM users WHERE id = 1 AND name LIKE '%kevin%';",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -49,10 +54,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "update",
-			query: "UPDATE users SET name = 'john' WHERE id = 1;",
+			sql: "UPDATE users SET name = 'john' WHERE id = 1;",
 			expectedTokens: []Token{
 				{ Type: UPDATE, Text: "UPDATE" },
 				{ Type: FIELD, Text: "users" },
@@ -67,10 +73,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "delete",
-			query: "DELETE FROM users WHERE id = 1 AND name LIKE '%kevin%';",
+			sql: "DELETE FROM users WHERE id = 1 AND name LIKE '%kevin%';",
 			expectedTokens: []Token{
 				{ Type: DELETE, Text: "DELETE" },
 				{ Type: FROM, Text: "FROM" },
@@ -86,10 +93,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "func",
-			query: "SELECT now();",
+			sql: "SELECT now();",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FUNC, Text: "now" },
@@ -98,10 +106,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "is_not_null",
-			query: "SELECT name FROM users WHERE email IS NOT NULL;",
+			sql: "SELECT name FROM users WHERE email IS NOT NULL;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -115,10 +124,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "l_than",
-			query: "SELECT name FROM users WHERE id < 2;",
+			sql: "SELECT name FROM users WHERE id < 2;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -131,10 +141,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "g_than",
-			query: "SELECT name FROM users WHERE id > 0;",
+			sql: "SELECT name FROM users WHERE id > 0;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -147,10 +158,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "lt_equal",
-			query: "SELECT name FROM users WHERE id <= 1;",
+			sql: "SELECT name FROM users WHERE id <= 1;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -163,10 +175,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "gt_equal",
-			query: "SELECT name FROM users WHERE id >= 1;",
+			sql: "SELECT name FROM users WHERE id >= 1;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -179,10 +192,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "n_equal",
-			query: "SELECT name FROM users WHERE id != 1;",
+			sql: "SELECT name FROM users WHERE id != 1;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -195,10 +209,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "and_or",
-			query: "SELECT name FROM users WHERE id = 1 AND (name = 'kevin' OR email = 'test@gmail.dk');",
+			sql: "SELECT name FROM users WHERE id = 1 AND (name = 'kevin' OR email = 'test@gmail.dk');",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -221,10 +236,11 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
 		},
 		{
 			name: "as",
-			query: "SELECT name AS result FROM users WHERE id = 1;",
+			sql: "SELECT name AS result FROM users WHERE id = 1;",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
@@ -239,14 +255,32 @@ func TestParseQuery(t *testing.T) {
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
+			expectedErrorCode: -1,
+		},
+		{
+			name: "pragma",
+			sql: "PRAGMA schema.table_info(users);",
+			expectedTokens: 	nil,
+			expectedErrorCode: UNSUPPORTED_QUERY,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseQuery(test.query); err != nil {
-				t.Fatal(err)
+			err := parser.ParseSql(test.sql); 
+
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil && !ok {
+				t.Fatalf("unexpected error, %v", err)
+			}
+
+			if ok && typedErr.Code() != test.expectedErrorCode {
+				t.Fatalf("unexpected error code, %v got %v", test.expectedErrorCode, typedErr.Code())
+			}
+
+			if test.expectedErrorCode != -1 {
+				return
 			}
 
 			if len(test.expectedTokens) != len(parser.tokens) {
@@ -269,12 +303,12 @@ func TestParseQuery(t *testing.T) {
 func TestParseQueryTokenStats(t *testing.T) {
 	tests := []struct{
 		name						string
-		query						string
+		sql							string
 		expectedTokens	[]Token
 	} {
 		{
 			name: "insert",
-			query: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
+			sql: "INSERT INTO users (name, email) VALUES ('kevin', 'test@gmail.dk');",
 			expectedTokens: []Token{
 				{ Type: INSERT, Text: "INSERT", LineNumber: 1, Start: 0, End: 6 },
 				{ Type: INTO, Text: "INTO", LineNumber: 1, Start: 7, End: 11 },
@@ -297,7 +331,7 @@ func TestParseQueryTokenStats(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseQuery(test.query); err != nil {
+			if err := parser.ParseSql(test.sql); err != nil {
 				t.Fatal(err)
 			}
 
@@ -333,31 +367,31 @@ func TestParseQueryTokenStats(t *testing.T) {
 func TestParseQueryTable(t *testing.T) {
 	tests := []struct{
 		name							string
-		query							string
+		sql								string
 		expectedResponse	string
 		expectedError			error
 	} {
 		{
 			name: "insert",
-			query: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
+			sql: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
 			expectedResponse: "users",
 			expectedError: nil,
 		},
 		{
 			name: "select",
-			query: "SELECT name, age FROM users WHERE id = 1;",
+			sql: "SELECT name, age FROM users WHERE id = 1;",
 			expectedResponse: "users",
 			expectedError: nil,
 		},
 		{
 			name: "update",
-			query: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
+			sql: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
 			expectedResponse: "users",
 			expectedError: nil,
 		},
 		{
 			name: "delete",
-			query: "DELETE FROM users WHERE id = 1;",
+			sql: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: "users",
 			expectedError: nil,
 		},
@@ -366,7 +400,7 @@ func TestParseQueryTable(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseQuery(test.query); err != test.expectedError {
+			if err := parser.ParseSql(test.sql); err != test.expectedError {
 				t.Fatalf("unexpected error while parsing, %v got %v", test.expectedError, err)
 			}
 
@@ -389,13 +423,13 @@ func TestParseQueryTable(t *testing.T) {
 func TestParseQueryColumns(t *testing.T) {
 	tests := []struct{
 		name							string
-		query							string
+		sql								string
 		expectedResponse	[]string
 		expectedError			error
 	} {
 		{
 			name: "insert",
-			query: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
+			sql: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
 			expectedResponse: []string{
 				"name",
 				"age",
@@ -405,7 +439,7 @@ func TestParseQueryColumns(t *testing.T) {
 		},
 		{
 			name: "select",
-			query: "SELECT name, age FROM users WHERE id = 1;",
+			sql: "SELECT name, age FROM users WHERE id = 1;",
 			expectedResponse: []string{
 				"name",
 				"age",
@@ -414,13 +448,13 @@ func TestParseQueryColumns(t *testing.T) {
 		},
 		{
 			name: "update",
-			query: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
+			sql: "UPDATE users SET name = 'kevin', age = 25 WHERE id = 1;",
 			expectedResponse: []string{},
 			expectedError: nil,
 		},
 		{
 			name: "delete",
-			query: "DELETE FROM users WHERE id = 1;",
+			sql: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: []string{},
 			expectedError: nil,
 		},
@@ -429,7 +463,7 @@ func TestParseQueryColumns(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseQuery(test.query); err != test.expectedError {
+			if err := parser.ParseSql(test.sql); err != test.expectedError {
 				t.Fatalf("unexpected error while parsing, %v got %v", test.expectedError, err)
 			}
 
@@ -454,27 +488,27 @@ func TestParseQueryColumns(t *testing.T) {
 func TestParseQueryToString(t *testing.T) {
 	tests := []struct{
 		name							string
-		query							string
+		sql								string
 		expectedError			error
 	} {
 		{
 			name: "insert",
-			query: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
+			sql: "INSERT INTO users (name, age, email) VALUES ('kevin', 25, 'test@gmail.dk');",
 			expectedError: nil,
 		},
 		{
 			name: "select",
-			query: "SELECT name, age FROM users WHERE name LIKE '%kev%' AND age < 30;",
+			sql: "SELECT name, age FROM users WHERE name LIKE '%kev%' AND age < 30;",
 			expectedError: nil,
 		},
 		{
 			name: "update",
-			query: "UPDATE users SET age = 26 WHERE id = 1;",
+			sql: "UPDATE users SET age = 26 WHERE id = 1;",
 			expectedError: nil,
 		},
 		{
 			name: "delete",
-			query: "DELETE FROM users WHERE id = 1;",
+			sql: "DELETE FROM users WHERE id = 1;",
 			expectedError: nil,
 		},
 	}
@@ -482,7 +516,7 @@ func TestParseQueryToString(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseQuery(test.query); err != test.expectedError {
+			if err := parser.ParseSql(test.sql); err != test.expectedError {
 				t.Fatalf("unexpected error while parsing, %v got %v", test.expectedError, err)
 			}
 
@@ -495,8 +529,8 @@ func TestParseQueryToString(t *testing.T) {
 			}
 
 			response := parser.trees[0].String()
-			if test.query != response {
-				t.Fatalf("unexpected response, '%s' got '%s'", test.query, response)
+			if test.sql != response {
+				t.Fatalf("unexpected response, '%s' got '%s'", test.sql, response)
 			}
 		})
 	}

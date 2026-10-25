@@ -13,7 +13,7 @@ import (
 
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
-	"github.com/fremenkiel/stdout.cv/internal/row"
+	"github.com/fremenkiel/stdout.cv/internal/query"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/table"
@@ -48,18 +48,18 @@ func main() {
 		os.Getenv("DATABASE_FILE_TEMPLATE"),
 		)
 
-	rowRepo := row.NewRepository(sessionCache)
+	queryRepo := query.NewRepository(sessionCache)
 	schemaRepo := schema.NewRepository(sessionCache)
 	tableRepo := table.NewRepository(sessionCache)
 
 	schemaService := schema.NewService(schemaRepo)
-	rowService := row.NewService(rowRepo, schemaService)
+	rowService := query.NewService(queryRepo, schemaService)
 	sessionService := session.NewService(sessionCache)
 	tableService := table.NewService(tableRepo, schemaService)
 
 	renderer := ui.NewRenderer()
 
-	rowHandler := row.NewHandler(renderer, rowService)
+	rowHandler := query.NewHandler(renderer, rowService)
 	tableHandler := table.NewHandler(renderer, tableService)
 
 	mux := http.NewServeMux()
@@ -78,7 +78,7 @@ func main() {
 		requireHtml,
 		sessionMiddleware,
 		)
-	row.NewRouter(
+	query.NewRouter(
 		mux,
 		rowHandler,
 		logger.LogRequestHandler,

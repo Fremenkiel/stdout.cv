@@ -1,10 +1,8 @@
-package row
+package query
 
 import (
 	"context"
-	"time"
 
-	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/interpreter"
 )
 
@@ -15,7 +13,6 @@ type repository interface {
 
 type SchemaService interface {
 	AppendWildcardSchema(ctx context.Context, tableName string, fields []string) ([]string, error)
-	GetSchema(ctx context.Context, name string) ([]*column.Column, error)
 }
 
 type Service struct {
@@ -23,7 +20,7 @@ type Service struct {
 	schemaService	SchemaService
 }
 
-var _ RowService = (*Service)(nil)
+var _ service = (*Service)(nil)
 
 func NewService(r repository, ss SchemaService) *Service {
 	return &Service{
@@ -32,15 +29,13 @@ func NewService(r repository, ss SchemaService) *Service {
 	}
 }
 
-func (s *Service) GetRows(ctx context.Context, query string) (*Result, error) {
-	var response Result
+func (s *Service) Run(ctx context.Context, sql string) (*Query, error) {
+	var response Query
 
 	parser := interpreter.NewParser()
-	if err := parser.ParseQuery(query); err != nil {
+	if err := parser.ParseSql(sql); err != nil {
 		return nil, err
 	}
-
-	start := time.Now()
 
 	executeQueries := parser.GetExecureQueries()
 	for i := range executeQueries {
@@ -51,8 +46,6 @@ func (s *Service) GetRows(ctx context.Context, query string) (*Result, error) {
 
 	returnQuery := parser.GetReturnQuery()
 	if returnQuery == nil {
-		response.Duration = time.Now().UnixMicro() - start.UnixMicro()
-
 		return &response, nil
 	}
 
@@ -73,7 +66,6 @@ func (s *Service) GetRows(ctx context.Context, query string) (*Result, error) {
 	}
 
 	response.Rows = rows
-	response.Duration = time.Now().UnixMicro() - start.UnixMicro()
 
 	return &response, nil
 }

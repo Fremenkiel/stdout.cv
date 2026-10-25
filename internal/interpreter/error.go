@@ -8,83 +8,81 @@ type Error struct {
 	msg  				string
 	code 				ErrorCode
 	lineNumber,
-	startChar		int
+	startChar,
+	endChar			int
 }
 
 var _ error = (*Error)(nil)
 
 func (e *Error) Error() string { return e.msg }
 func (e *Error) Code() ErrorCode { return e.code }
-func (e *Error) Pos() (lineNumber, startChar int) { return e.lineNumber, e.startChar }
+func (e *Error) Pos() (lineNumber, startChar, endChar int) { return e.lineNumber, e.startChar, e.endChar }
 
-func NewError(code ErrorCode, line, pos int, str string) *Error {
+func NewError(code ErrorCode, line, endPos int, str string) *Error {
 	return &Error{
-		msg: fmt.Sprintf("line %v,%v | %s (%s)",
-			line, pos, parseErrorCode(code), str,
+		msg: fmt.Sprintf("line %v,%v | %s ´%s´",
+			line, endPos, ErrorCodeString[code], str,
 			),
 		code: code,
 		lineNumber: line,
-		startChar: pos,
+		startChar: endPos - len(str),
+		endChar: endPos,
 	}
 }
 
 var (
 	ErrorCodeString = map[ErrorCode]string{
-		NoQuery: "No query given",
-		UnsupportedQuery: "Unsupported query",
+		NO_QUERY:											"No query given (NO_QUERY)",
+		UNSUPPORTED_QUERY:						"Query type is not supported (UNSUPPORTED_QUERY)",
 
-		InvalidInsertStatement: "Invalid INSERT statement, add",
-		InvalidSelectStatement: "Invalid SELECT statement, add",
-		InvalidUpdateStatement: "Invalid UPDATE statement, add",
-		InvalidDeleteStatement: "Invalid DELETE statement, add",
+		INVALID_INSERT_STATEMENT:			"INSERT statement is invalidly formatted (INVALID_INSERT_STATEMENT)",
+		INVALID_SELECT_STATEMENT:			"SELECT statement is invalidly formatted (INVALID_SELECT_STATEMENT)",
+		INVALID_UPDATE_STATEMENT:			"UPDATE statement is invalidly formatted (INVALID_UPDATE_STATEMENT)",
+		INVALID_DELETE_STATEMENT:			"DELETE statement is invalidly formatted (INVALID_DELETE_STATEMENT)",
 
-		InvalidQuery: "Query is invalid formatted",
-		InvalidQueryLexNumber: "Query formatted error while lexing number",
-		InvalidQueryLexKeyword: "Query formatted error while lexing keyword",
+		INVALID_QUERY:								"Query is invalidly formatted (INVALID_QUERY)",
+		INVALID_QUERY_LEX_NUMBER:			"Query formatted error while lexing number (INVALID_QUERY_LEX_NUMBER)",
+		INVALID_QUERY_LEX_KEYWORD:		"Query formatted error while lexing keyword (INVALID_QUERY_LEX_KEYWORD)",
 
-		InvalidString: "String is not correctly closed, add termination to",
-		InvalidListFormat: "Invalid list format, add",
-		InvalidField: "Unexpected token type when trying to parse field, got",
-		InvalidTypeForPrecedence: "Invalid token type for expression, precedence not set for",
-		InvalidEndOfStatement: "Invalid end of statement, add",
-		InvalidBaseNodeType: "Invalid base node type",
-		InvalidFuncChar: "Invalid func char, add",
-		InvalidOperatiorToken: "Invalid operator token",
+		INVALID_STRING:								"String is not correctly formatted, add termination (INVALID_STRING)",
+		INVALID_LIST_FORMAT:					"Invalid list format (INVALID_LIST_FORMAT)",
+		INVALID_FIELD:								"Unexpected token type while trying to parse field 8INVALID_FIELD)",
+		INVALID_TYPE_FOR_PRECEDENCE:	"Invalid token type for expression, no precedence set (INVALID_TYPE_FOR_PRECEDENCE)",
+		INVALID_END_OF_STATEMENT:			"Statement is invalidly ended (INVALID_END_OF_STATEMENT)",
+		INVALID_BASE_NODE_TYPE:				"Base node type in not valid (INVALID_BASE_NODE_TYPE)",
+		INVALID_FUNC_CHAR:						"Func call is invalidly formatted (INVALID_FUNC_CHAR)",
+		INVALID_OPERATOR_TOKEN:				"Token is invalid as operator (INVALID_OPERATOR_TOKEN)",
 
-		UnexpectedEOF: "Unexpected end of file after",
-		UnknownBaseNodeType: "Unknown base node type recived, this might be a resulte of a falty query before the current",
+		UNEXPECTED_EOF:								"Unexpected end of file (UNEXPECTED_EOF)",
+		UNKNOWN_BASE_NODE_TYPE:				"Unknown base node type recived, this might be a resulte of a falty part earlier in the query (UNKNOWN_BASE_NODE_TYPE)",
 	}
 )
 
 type ErrorCode int
 
 const (
-	NoQuery ErrorCode = iota
-	UnsupportedQuery
+	NO_QUERY ErrorCode = iota
+	UNSUPPORTED_QUERY
 
-	InvalidInsertStatement
-	InvalidSelectStatement
-	InvalidUpdateStatement
-	InvalidDeleteStatement
+	INVALID_INSERT_STATEMENT
+	INVALID_SELECT_STATEMENT
+	INVALID_UPDATE_STATEMENT
+	INVALID_DELETE_STATEMENT
 
-	InvalidQuery
-	InvalidQueryLexNumber
-	InvalidQueryLexKeyword
+	INVALID_QUERY
+	INVALID_QUERY_LEX_NUMBER
+	INVALID_QUERY_LEX_KEYWORD
 
-	InvalidString
-	InvalidListFormat
-	InvalidField
-	InvalidTypeForPrecedence
-	InvalidEndOfStatement
-	InvalidBaseNodeType
-	InvalidFuncChar
-	InvalidOperatiorToken
+	INVALID_STRING
+	INVALID_LIST_FORMAT
+	INVALID_FIELD
+	INVALID_TYPE_FOR_PRECEDENCE
+	INVALID_END_OF_STATEMENT
+	INVALID_BASE_NODE_TYPE
+	INVALID_FUNC_CHAR
+	INVALID_OPERATOR_TOKEN
 
-	UnexpectedEOF
-	UnknownBaseNodeType
+	UNEXPECTED_EOF
+	UNKNOWN_BASE_NODE_TYPE
 )
-
-func parseErrorCode(code ErrorCode) string {
-	return ErrorCodeString[code]
-}
 

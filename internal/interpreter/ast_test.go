@@ -60,7 +60,7 @@ func TestNewInsertNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidInsertStatement,
+			expectedErrorCode: INVALID_INSERT_STATEMENT,
 		},
 		{
 			name: "no_semicol",
@@ -83,7 +83,7 @@ func TestNewInsertNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidEndOfStatement,
+			expectedErrorCode: INVALID_END_OF_STATEMENT,
 		},
 		{
 			name: "select",
@@ -98,7 +98,7 @@ func TestNewInsertNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_INSERT_STATEMENT,
 		},
 	}
 
@@ -296,7 +296,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_SELECT_STATEMENT,
 		},
 	}
 
@@ -408,7 +408,7 @@ func TestNewUpdateNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidUpdateStatement,
+			expectedErrorCode: INVALID_UPDATE_STATEMENT,
 		},
 		{
 			name: "select",
@@ -423,7 +423,7 @@ func TestNewUpdateNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_UPDATE_STATEMENT,
 		},
 		{
 			name: "multiple_set",
@@ -551,7 +551,7 @@ func TestNewDeleteNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidDeleteStatement,
+			expectedErrorCode: INVALID_DELETE_STATEMENT,
 		},
 		{
 			name: "select",
@@ -566,7 +566,7 @@ func TestNewDeleteNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_DELETE_STATEMENT,
 		},
 	}
 
@@ -729,7 +729,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidField,
+			expectedErrorCode: INVALID_FIELD,
 		},
 	}
 
@@ -829,7 +829,7 @@ func TestNewExpressionNode(t *testing.T) {
 			expetedPrecedense: 0,
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidTypeForPrecedence,
+			expectedErrorCode: INVALID_TYPE_FOR_PRECEDENCE,
 		},
 	}
 
@@ -963,7 +963,7 @@ func TestNewOperationNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "",
-			expectedErrorCode: InvalidOperatiorToken,
+			expectedErrorCode: INVALID_OPERATOR_TOKEN,
 		},
 	}
 	for _, test := range tests {
@@ -1032,7 +1032,7 @@ func TestNewCastNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_BASE_NODE_TYPE,
 		},
 		{
 			name: "invalid",
@@ -1045,7 +1045,7 @@ func TestNewCastNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_BASE_NODE_TYPE,
 		},
 		{
 			name: "non_field",
@@ -1058,7 +1058,7 @@ func TestNewCastNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_BASE_NODE_TYPE,
 		},
 	}
 
@@ -1159,7 +1159,7 @@ func TestNewFuncNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidFuncChar,
+			expectedErrorCode: INVALID_FUNC_CHAR,
 		},
 		{
 			name: "select",
@@ -1171,7 +1171,7 @@ func TestNewFuncNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidBaseNodeType,
+			expectedErrorCode: INVALID_BASE_NODE_TYPE,
 		},
 	}
 	for _, test := range tests {
@@ -1287,7 +1287,7 @@ func TestNewListNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidListFormat,
+			expectedErrorCode: INVALID_LIST_FORMAT,
 		},
 		{
 			name: "no_end",
@@ -1299,7 +1299,7 @@ func TestNewListNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidListFormat,
+			expectedErrorCode: INVALID_LIST_FORMAT,
 		},
 		{
 			name: "select",
@@ -1310,7 +1310,7 @@ func TestNewListNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: InvalidListFormat,
+			expectedErrorCode: INVALID_LIST_FORMAT,
 		},
 	}
 	for _, test := range tests {

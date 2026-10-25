@@ -1,4 +1,4 @@
-package row
+package query
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func TestNewRouter(t *testing.T) {
 
 	req := httptest.NewRequestWithContext(
 		context.WithValue(t.Context(), "session_key", "test"),
-		http.MethodGet, "/rows?query=select%20name%20from%20users%3B%0A", nil)
+		http.MethodGet, "/query?sql=select%20name%20from%20users%3B%0A", nil)
 
 	rr := httptest.NewRecorder()
 
