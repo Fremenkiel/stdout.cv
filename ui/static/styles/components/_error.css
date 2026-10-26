@@ -1,5 +1,43 @@
+.error__container {
+  width: 100%;
+  margin: var(--size-margin);
+  border-radius: var(--size-border-radius);
+  border: 1px solid color-mix(in srgb, var(--color-error) 50%, transparent);
+  overflow: hidden;
+}
+
+.error__header,
+.error__footer {
+  height: 60px;
+  padding: calc(var(--size-padding-y) * 2);
+  display: flex;
+  direction: column;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-background-error);
+}
+
+.error__header {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-error) 50%, transparent);
+}
+
+.error__footer {
+  border-top: 1px solid color-mix(in srgb, var(--color-error) 50%, transparent);
+}
+
+.error__title {
+  font-size: 16px;
+  color: var(--color-text-error);
+}
+
+.error__description,
+.error__helpertext {
+  font-size: 14px;
+  color: var(--color-text-error);
+}
+
 .text-error {
-  text-decoration: underline wavy var(--color-text-error-decoration);
+  text-decoration: underline wavy var(--color-error);
 }
 
 .error__container .text-error {
@@ -7,6 +45,10 @@
   color: var(--color-text-error);
 }
 
+.error__container .CodeMirror {
+  margin: var(--size-margin);
+}
+
 .error-line .CodeMirror-linenumber {
-  color: var(--color-text-error-decoration);
+  color: var(--color-error);
 }

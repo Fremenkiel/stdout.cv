@@ -22,11 +22,13 @@ func TestNewInsertNode(t *testing.T) {
 				{ Type: FIELD, Text: "users" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "age" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: VALUES, Text: "VALUES" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
 				{ Type: NUMBER, Text: "25" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: SEMICOL, Text: ";" },
@@ -47,11 +49,13 @@ func TestNewInsertNode(t *testing.T) {
 				{ Type: FIELD, Text: "users" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "age" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: VALUES, Text: "VALUES" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
 				{ Type: NUMBER, Text: "25" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: SEMICOL, Text: ";" },
@@ -70,14 +74,15 @@ func TestNewInsertNode(t *testing.T) {
 				{ Type: FIELD, Text: "users" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "age" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: VALUES, Text: "VALUES" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
 				{ Type: NUMBER, Text: "25" },
 				{ Type: R_PARAN, Text: ")" },
-				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "",
@@ -111,11 +116,7 @@ func TestNewInsertNode(t *testing.T) {
 
 			response, err := newInsetNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -176,6 +177,23 @@ func TestNewSelectNode(t *testing.T) {
 			expectedErrorCode: -1,
 		},
 		{
+			name: "select_public",
+			tokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "public.users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "SELECT name FROM public.users;",
+			expectedColumns: []string{
+				"name",
+			},
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "public.users" } } },
+			expectedErrorCode: -1,
+		},
+		{
 			name: "where",
 			tokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
@@ -197,10 +215,31 @@ func TestNewSelectNode(t *testing.T) {
 			expectedErrorCode: -1,
 		},
 		{
+			name: "multiple_columns",
+			tokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
+				{ Type: FIELD, Text: "age" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "SELECT name, age FROM users;",
+			expectedColumns: []string{
+				"name",
+				"age",
+			},
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
 			name: "wildcard",
 			tokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "*" },
 				{ Type: FROM, Text: "FROM" },
 				{ Type: FIELD, Text: "users" },
@@ -290,6 +329,38 @@ func TestNewSelectNode(t *testing.T) {
 			expectedErrorCode: -1,
 		},
 		{
+			name: "multiple_columns_no_comma",
+			tokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedColumns: nil,
+			expectedTable: nil,
+			expectedErrorCode: INVALID_SELECT_STATEMENT,
+		},
+		{
+			name: "wildcard_no_comma",
+			tokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "*" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedColumns: nil,
+			expectedTable: nil,
+			expectedErrorCode: INVALID_SELECT_STATEMENT,
+		},
+		{
 			name: "update",
 			tokens: []Token{
 				{ Type: UPDATE, Text: "UPDATE" },
@@ -317,11 +388,7 @@ func TestNewSelectNode(t *testing.T) {
 
 			response, err := newSelectNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -450,9 +517,11 @@ func TestNewUpdateNode(t *testing.T) {
 				{ Type: FIELD, Text: "name" },
 				{ Type: EQUAL, Text: "=" },
 				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "email" },
 				{ Type: EQUAL, Text: "=" },
 				{ Type: STRING, Text: "test@gmail.dk" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "age" },
 				{ Type: EQUAL, Text: "=" },
 				{ Type: NUMBER, Text: "25" },
@@ -481,11 +550,7 @@ func TestNewUpdateNode(t *testing.T) {
 
 			response, err := newUpdateNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -603,11 +668,7 @@ func TestNewDeleteNode(t *testing.T) {
 
 			response, err := newDeleteNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -627,6 +688,131 @@ func TestNewDeleteNode(t *testing.T) {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
 				}
+			}
+
+			if response.Table() == nil && test.expectedTable == nil {
+				return
+			}
+
+			if str := response.Table().String(); test.expectedTable.String() != str {
+				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
+			}
+
+		})
+	}
+}
+
+func TestNewDropNode(t *testing.T) {
+	tests := []struct{
+		name							string
+		tokens						[]Token
+		expectedResponse  string
+		expectedTable			Node
+		expectedErrorCode	ErrorCode
+	} {
+		{
+			name: "drop",
+			tokens: []Token{
+				{ Type: DROP, Text: "DROP" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "DROP TABLE users;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "if_exists",
+			tokens: []Token{
+				{ Type: DROP, Text: "DROP" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: IF, Text: "IF" },
+				{ Type: EXISTS, Text: "EXISTS" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "DROP TABLE IF EXISTS users;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "if_where",
+			tokens: []Token{
+				{ Type: DROP, Text: "DROP" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: IF, Text: "IF" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedTable: nil,
+			expectedErrorCode: INVALID_DROP_STATEMENT,
+		},
+		{
+			name: "where",
+			tokens: []Token{
+				{ Type: DROP, Text: "DROP" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: WHERE, Text: "WHERE" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: NUMBER, Text: "1" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedTable: nil,
+			expectedErrorCode: INVALID_END_OF_STATEMENT,
+		},
+		{
+			name: "select",
+			tokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedTable: nil,
+			expectedErrorCode: INVALID_DROP_STATEMENT,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				tokens: test.tokens,
+				r: 0,
+			}
+
+			response, err := newDropNode(parser)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil || test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
+				return
+			}
+
+			if str := response.String(); test.expectedResponse != str {
+				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
+			}
+
+			cols := response.Columns()
+			if cols != nil {
+				t.Fatalf("unexpected column, nil got %v", cols)
 			}
 
 			if response.Table() == nil && test.expectedTable == nil {
@@ -775,11 +961,78 @@ func TestNewFieldNode(t *testing.T) {
 			response, err := newFieldNode(parser)
 
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
+			if err != nil || test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
+				return
 			}
 
-			if test.expectedErrorCode != -1 {
+			if str := response.String(); test.expectedResponse != str {
+				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
+			}
+
+			cols := response.Columns()
+			for i := range cols {
+				if str := cols[i]; test.expectedColumns[i] != str {
+					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
+				}
+			}
+
+			if response.Table() == nil && test.expectedTable == nil {
+				return
+			}
+
+			if str := response.Table().String(); test.expectedTable.String() != str {
+				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
+			}
+		})
+	}
+}
+
+func TestNewColumnNode(t *testing.T) {
+	tests := []struct{
+		name							string
+		tokens						[]Token
+		expectedResponse  string
+		expectedColumns		[]string
+		expectedTable			Node
+		expectedErrorCode	ErrorCode
+	} {
+		{
+			name: "column",
+			tokens: []Token{
+				{ Type: FIELD, Text: "id" },
+				{ Type: FIELD, Text: "INTEGER" },
+				{ Type: PRIMARY, Text: "PRIMARY" },
+				{ Type: KEY, Text: "KEY" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "id INTEGER PRIMARY KEY",
+			expectedColumns: []string{
+				"id",
+			},
+			expectedTable: nil,
+			expectedErrorCode: -1,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				tokens: test.tokens,
+				r: 0,
+			}
+
+			response, err := newColumnNode(parser)
+
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -883,11 +1136,7 @@ func TestNewExpressionNode(t *testing.T) {
 
 			response, err := newExpressionNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -1014,6 +1263,52 @@ func TestNewOperationNode(t *testing.T) {
 			expectedResponse: "",
 			expectedErrorCode: INVALID_OPERATOR_TOKEN,
 		},
+		{
+			name: "if_exists",
+			tokens: []Token{
+				{ Type: IF, Text: "IF" },
+				{ Type: EXISTS, Text: "EXISTS" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "IF EXISTS",
+			expectedErrorCode: -1,
+		},
+		{
+			name: "alter_column",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: FIELD, Text: "INTEGER" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "ALTER COLUMN",
+			expectedErrorCode: -1,
+		},
+		{
+			name: "text_not_null",
+			tokens: []Token{
+				{ Type: FIELD, Text: "TEXT" },
+				{ Type: NOT, Text: "NOT" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "TEXT NOT NULL",
+			expectedErrorCode: -1,
+		},
+		{
+			name: "integer_primary_key",
+			tokens: []Token{
+				{ Type: FIELD, Text: "INTEGER" },
+				{ Type: PRIMARY, Text: "PRIMARY" },
+				{ Type: KEY, Text: "KEY" },
+				{ Type: NOT, Text: "NOT" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "INTEGER PRIMARY KEY NOT NULL",
+			expectedErrorCode: -1,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1024,11 +1319,7 @@ func TestNewOperationNode(t *testing.T) {
 
 			node, err := newOperatorNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -1102,7 +1393,7 @@ func TestNewCastNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: INVALID_BASE_NODE_TYPE,
+			expectedErrorCode: INVALID_CAST_FORMAT,
 		},
 		{
 			name: "non_field",
@@ -1115,7 +1406,7 @@ func TestNewCastNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: INVALID_BASE_NODE_TYPE,
+			expectedErrorCode: INVALID_CAST_FORMAT,
 		},
 	}
 
@@ -1135,11 +1426,7 @@ func TestNewCastNode(t *testing.T) {
 
 			response, err := newCastNode(parser, &fieldNode)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -1248,11 +1535,7 @@ func TestNewFuncNode(t *testing.T) {
 
 			node, err := newFuncNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -1285,6 +1568,7 @@ func TestNewListNode(t *testing.T) {
 			tokens: []Token{
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "age" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: EOF, Text: "" },
@@ -1302,6 +1586,7 @@ func TestNewListNode(t *testing.T) {
 			tokens: []Token{
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: STRING, Text: "kevin" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: EOF, Text: "" },
@@ -1315,10 +1600,11 @@ func TestNewListNode(t *testing.T) {
 			expectedErrorCode: -1,
 		},
 		{
-			name: "numer",
+			name: "number",
 			tokens: []Token{
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: NUMBER, Text: "1" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: EOF, Text: "" },
@@ -1338,6 +1624,7 @@ func TestNewListNode(t *testing.T) {
 				{ Type: FUNC, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "name" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: EOF, Text: "" },
@@ -1375,6 +1662,20 @@ func TestNewListNode(t *testing.T) {
 			expectedErrorCode: INVALID_LIST_FORMAT,
 		},
 		{
+			name: "no_comma",
+			tokens: []Token{
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedColumns: nil,
+			expectedTable: nil,
+			expectedErrorCode: INVALID_LIST_FORMAT,
+		},
+		{
 			name: "select",
 			tokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
@@ -1395,11 +1696,7 @@ func TestNewListNode(t *testing.T) {
 
 			node, err := newListNode(parser)
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}

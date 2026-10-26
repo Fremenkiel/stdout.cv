@@ -4,7 +4,11 @@
     <h1 class="error__title">{{ .Code }}</h1>
     <h2 class="error__description">line {{ if .LineNumber }}{{ .LineNumber }}{{ else }}0{{ end }}, col {{ if .CharStartNumber }}{{ .CharStartNumber }}{{ else }}0{{ end }}</h2>
   </div>
-<div class="error__snippet" id="snippet-error"></div>
+<div class="error__snippet" id="snippet-error">
+</div>
+<div class="error__footer">
+  <span class="error__helpertext">{{ .Helpertext }}</span>
+</div>
 </div>
 {{ if .Code }}
 <script>

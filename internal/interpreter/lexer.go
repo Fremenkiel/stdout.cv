@@ -104,6 +104,16 @@ func (l *Lexer) Next() (Token, error) {
 				)
 		case c == '=':
 			return l.newToken(EQUAL, string(c)), nil
+		case c == '*':
+			if !isSeperatorChar(l.peakByte()) {
+			return Token{}, NewError(
+				INVALID_QUERY,
+				l.currentLine,
+				l.currentChar,
+				string(c),
+				)
+			}
+			return l.newToken(WILDCARD, string(c)), nil
 		default:
 			return l.nextKeyword(c)
 		}
@@ -115,26 +125,32 @@ func (l *Lexer) nextNumber(char byte) (Token, error) {
 	var num = []byte{char}
 
 	var isFloat bool
-	var p byte
+
+	outerloop:
 	for {
-		p = l.peakByte()
-		if isSeperatorChar(p) {
-			break
+		peak := l.peakByte()
+		switch {
+		case isSeperatorChar(peak):
+			break outerloop
+		case peak == ',':
+			break outerloop
+		case peak == ';':
+			break outerloop
+		case peak == ')':
+			break outerloop
+		case peak == byte(0):
+		case !isNumber(peak):
+			return Token{}, NewError(
+				INVALID_QUERY_LEX_NUMBER,
+				l.currentLine,
+				l.currentChar + 1,
+				string(append(num, peak)),
+				)
 		}
 
 		b, err := l.readByte()
 		if err != nil {
 			break
-		}
-
-		if !isNumber(b) {
-			cStr := string(append(num, b))
-			return Token{}, NewError(
-				INVALID_QUERY_LEX_NUMBER,
-				l.currentLine,
-				l.currentChar,
-				cStr,
-				)
 		}
 
 		if b == '.' {
@@ -207,6 +223,8 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 			return Token{}, l.newKeywordError(string(append(kw, p)))
 		case p == '>':
 			return Token{}, l.newKeywordError(string(append(kw, p)))
+		case p == '*':
+			return Token{}, l.newKeywordError(string(append(kw, p)))
 		case isStringMarker(p):
 			return Token{}, l.newKeywordError(string(append(kw, p)))
 		case isSeperatorChar(p):
@@ -217,7 +235,6 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 			break outerloop
 		case p == ',':
 			break outerloop
-
 		}
 
 		b, err := l.readByte()
@@ -247,6 +264,10 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		return l.newToken(INSERT, keyword), nil
 	case string(DELETE):
 		return l.newToken(DELETE, keyword), nil
+	case string(DROP):
+		return l.newToken(DROP, keyword), nil
+	case string(CREATE):
+		return l.newToken(CREATE, keyword), nil
 	case string(INTO):
 		return l.newToken(INTO, keyword), nil
 	case string(FROM):
@@ -261,6 +282,22 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		return l.newToken(NULL, keyword), nil
 	case string(AS):
 		return l.newToken(AS, keyword), nil
+	case string(IF):
+		return l.newToken(IF, keyword), nil
+	case string(EXISTS):
+		return l.newToken(EXISTS, keyword), nil
+	case string(TABLE):
+		return l.newToken(TABLE, keyword), nil
+	case string(ALTER):
+		return l.newToken(ALTER, keyword), nil
+	case string(COLUMN):
+		return l.newToken(COLUMN, keyword), nil
+	case string(ADD):
+		return l.newToken(ADD, keyword), nil
+	case string(PRIMARY):
+		return l.newToken(PRIMARY, keyword), nil
+	case string(KEY):
+		return l.newToken(KEY, keyword), nil
 	}
 
 	if p == '(' {

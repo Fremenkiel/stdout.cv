@@ -16,7 +16,7 @@ func TestLexer(t *testing.T) {
 			query: "-- Write something here\nSELECT * FROM users WHERE id = 1;",
 			expectedResponse: []Token{
 				{ Type: SELECT, Text: "SELECT",	LineNumber: 2, Start: 0, End: 6 },
-				{ Type: FIELD, Text: "*",				LineNumber: 2, Start: 7, End: 8 },
+				{ Type: WILDCARD, Text: "*",		LineNumber: 2, Start: 7, End: 8 },
 				{ Type: FROM, Text: "FROM",			LineNumber: 2, Start: 9, End: 13 },
 				{ Type: FIELD, Text: "users",		LineNumber: 2, Start: 14, End: 19 },
 				{ Type: WHERE, Text: "WHERE",		LineNumber: 2, Start: 20, End: 25 },
@@ -25,6 +25,43 @@ func TestLexer(t *testing.T) {
 				{ Type: NUMBER, Text: "1",			LineNumber: 2, Start: 31, End: 32 },
 				{ Type: SEMICOL, Text: ";",			LineNumber: 2, Start: 32, End: 33 },
 				{ Type: EOF, Text: "",					LineNumber: 2, Start: 33, End: 33 },
+			},
+		},
+		{
+			name: "alter",
+			query: "ALTER TABLE users ADD COLUMN age INTEGER;",
+			expectedResponse: []Token{
+				{ Type: ALTER, Text: "ALTER",		LineNumber: 1, Start: 0, End: 5 },
+				{ Type: TABLE, Text: "TABLE",		LineNumber: 1, Start: 6, End: 11 },
+				{ Type: FIELD, Text: "users",		LineNumber: 1, Start: 12, End: 17 },
+				{ Type: ADD, Text: "ADD",				LineNumber: 1, Start: 18, End: 21 },
+				{ Type: COLUMN, Text: "COLUMN",	LineNumber: 1, Start: 22, End: 28 },
+				{ Type: FIELD, Text: "age",			LineNumber: 1, Start: 29, End: 32 },
+				{ Type: FIELD, Text: "INTEGER",	LineNumber: 1, Start: 33, End: 40 },
+				{ Type: SEMICOL, Text: ";",			LineNumber: 1, Start: 40, End: 41 },
+				{ Type: EOF, Text: "",					LineNumber: 1, Start: 41, End: 41 },
+			},
+		},
+		{
+			name: "create",
+			query: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+			expectedResponse: []Token{
+				{ Type: CREATE, Text: "CREATE",	LineNumber: 1, Start: 0, End: 6 },
+				{ Type: TABLE, Text: "TABLE",		LineNumber: 1, Start: 7, End: 12 },
+				{ Type: FIELD, Text: "users",		LineNumber: 1, Start: 13, End: 18 },
+				{ Type: L_PARAN, Text: "(",			LineNumber: 1, Start: 19, End: 20 },
+				{ Type: FIELD, Text: "id",			LineNumber: 1, Start: 20, End: 22 },
+				{ Type: FIELD, Text: "INTEGER",	LineNumber: 1, Start: 23, End: 30 },
+				{ Type: PRIMARY, Text: "PRIMARY",	LineNumber: 1, Start: 31, End: 38 },
+				{ Type: KEY, Text: "KEY",			LineNumber: 1, Start: 39, End: 42 },
+				{ Type: COMMA, Text: ",",				LineNumber: 1, Start: 42, End: 43 },
+				{ Type: FIELD, Text: "name",		LineNumber: 1, Start: 44, End: 48 },
+				{ Type: FIELD, Text: "TEXT",		LineNumber: 1, Start: 49, End: 53 },
+				{ Type: NOT, Text: "NOT",				LineNumber: 1, Start: 54, End: 57 },
+				{ Type: NULL, Text: "NULL",			LineNumber: 1, Start: 58, End: 62 },
+				{ Type: R_PARAN, Text: ")",			LineNumber: 1, Start: 62, End: 63 },
+				{ Type: SEMICOL, Text: ";",			LineNumber: 1, Start: 63, End: 64 },
+				{ Type: EOF, Text: "",					LineNumber: 1, Start: 64, End: 64 },
 			},
 		},
 	}
@@ -73,7 +110,6 @@ func TestLexer(t *testing.T) {
 		})
 	}
 }
-  
 
 func TestNext(t *testing.T) {
 	tests := []struct{
@@ -116,6 +152,15 @@ func TestNext(t *testing.T) {
 			name: "field",
 			query: "users",
 			expectedResponse: Token{ Type: FIELD, Text: "users" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "field_with_punkt",
+			query: "public.users",
+			expectedResponse: Token{ Type: FIELD, Text: "public.users" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
 			expectedErrorCharStartNumber: -1,
@@ -176,13 +221,40 @@ func TestNext(t *testing.T) {
 			expectedErrorCharEndNumber: -1,
 		},
 		{
-			name: "field_with_wildcard",
+			name: "wildcard_with_field",
 			query: "*test",
 			expectedResponse: Token{},
-			expectedErrorCode: INVALID_FIELD,
+			expectedErrorCode: INVALID_QUERY,
 			expectedErrorLineNumber: 1,
-			expectedErrorCharStartNumber: 1,
-			expectedErrorCharEndNumber: 2,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 1,
+		},
+		{
+			name: "field_with_wildcard",
+			query: "test*",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 5,
+		},
+		{
+			name: "wildcard_with_field_with_wildcard",
+			query: "*test*",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 1,
+		},
+		{
+			name: "field_with_wildcard_with_field_with_wildcard_with_field",
+			query: "test*test*test",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 5,
 		},
 	}
 	for _, test := range tests {
@@ -193,11 +265,7 @@ func TestNext(t *testing.T) {
 			response, err := lexer.Next()
 
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -342,6 +410,33 @@ func TestNextNumber(t *testing.T) {
 			expectedErrorCharStartNumber: -1,
 			expectedErrorCharEndNumber: -1,
 		},
+		{
+			name: "r_paran",
+			query: "14)",
+			expectedResponse: Token{ Type: NUMBER, Text: "14" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "comma",
+			query: "14,",
+			expectedResponse: Token{ Type: NUMBER, Text: "14" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "nl",
+			query: "14\n",
+			expectedResponse: Token{ Type: NUMBER, Text: "14" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -356,11 +451,7 @@ func TestNextNumber(t *testing.T) {
 			response, err := lexer.nextNumber(b)
 
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -465,11 +556,7 @@ func TestNextString(t *testing.T) {
 			response, err := lexer.nextString()
 
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -515,9 +602,45 @@ func TestNextKeyword(t *testing.T) {
 		expectedErrorCharEndNumber		int
 	} {
 		{
+			name: "insert",
+			query: "insert",
+			expectedResponse: Token{ Type: INSERT, Text: "insert" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
 			name: "select",
-			query: "select ",
+			query: "select",
 			expectedResponse: Token{ Type: SELECT, Text: "select" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "update",
+			query: "update",
+			expectedResponse: Token{ Type: UPDATE, Text: "update" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "delete",
+			query: "delete",
+			expectedResponse: Token{ Type: DELETE, Text: "delete" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "drop",
+			query: "drop",
+			expectedResponse: Token{ Type: DROP, Text: "drop" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
 			expectedErrorCharStartNumber: -1,
@@ -600,11 +723,7 @@ func TestNextKeyword(t *testing.T) {
 			response, err := lexer.nextKeyword(b)
 
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}

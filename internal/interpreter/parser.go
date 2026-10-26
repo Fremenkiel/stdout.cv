@@ -17,6 +17,9 @@ func NewParser() *Parser {
 			SELECT:	newSelectNode,
 			UPDATE: newUpdateNode,
 			DELETE:	newDeleteNode,
+			DROP: newDropNode,
+			ALTER: newAlterNode,
+			CREATE: newCreateNode,
 		},
 		r: -1,
 	}
@@ -85,7 +88,7 @@ func (p *Parser) GetReturnQuery() Node {
 		return nil
 	}
 
-	if rq := p.trees[len(p.trees) - 1]; rq.ReturnsValue() {
+	if rq := p.trees[len(p.trees) - 1]; rq.TokenType() == SELECT {
 		return rq
 	}
 
@@ -143,6 +146,14 @@ func (p *Parser) newParseNode() (Node, error) {
 	}
 
 	return newExpressionNode(p)
+}
+
+func (p *Parser) peakToken() Token {
+	if (p.r + 1) >= len(p.tokens) {
+		return Token{}
+	}
+
+	return p.tokens[p.r + 1]
 }
 
 func (p *Parser) currentToken() Token {

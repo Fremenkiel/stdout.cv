@@ -20,6 +20,8 @@ func (t Token) isField() bool {
 		return true
 	case NULL:
 		return true
+	case WILDCARD:
+		return true
 	}
 
 	return false
@@ -46,6 +48,24 @@ func (t Token) isOperator() bool {
 	case IN:
 		return true
 	case NOT:
+		return true
+	case IF:
+		return true
+	case EXISTS:
+		return true
+	case ADD:
+		return true
+	case ALTER:
+		return true
+	case DROP:
+		return true
+	case COLUMN:
+		return true
+	case CREATE:
+		return true
+	case PRIMARY:
+		return true
+	case KEY:
 		return true
 	}
 
@@ -75,6 +95,8 @@ const (
 	LIKE			TokenType = "LIKE"									// LIKE operator
 	AS				TokenType = "AS"										// AS operator
 	IN				TokenType = "IN"										// IN operator
+	IF				TokenType = "IF"										// IF operator
+	EXISTS		TokenType = "EXISTS"								// EXISTS operator
 
 	// Delimitor
 	SEMICOL		TokenType = "SEMICOL"								// ;
@@ -87,6 +109,9 @@ const (
 	UPDATE		TokenType = "UPDATE"
 	INSERT		TokenType = "INSERT"
 	DELETE		TokenType = "DELETE"
+	DROP			TokenType = "DROP"
+	ALTER			TokenType = "ALTER"
+	CREATE		TokenType = "CREATE"
 
 	// Expressions
 	INTO 			TokenType = "INTO"
@@ -94,15 +119,23 @@ const (
 	WHERE 		TokenType = "WHERE"
 	VALUES 		TokenType = "VALUES"
 	SET 			TokenType = "SET"
+	TABLE 		TokenType = "TABLE"
+	ADD				TokenType = "ADD"
+	COLUMN		TokenType = "COLUMN"
+	PRIMARY		TokenType = "PRIMARY"
+	KEY				TokenType = "KEY"
 
 	// VALUES
 	NULL			TokenType = "NULL"
+	WILDCARD	TokenType = "WILDCARD"						// *
 )
 
+// todo: change to switch with default -1 (Kevin)
 var precedenceMap = map[TokenType]int{
 	EOF: -1,
 	SEMICOL: -1,
 	COMMA: -1,
+	WILDCARD: -1,
 
 	INSERT: -1,
 	SELECT: -1,
@@ -114,11 +147,18 @@ var precedenceMap = map[TokenType]int{
 	WHERE: -1,
 	VALUES: -1,
 	SET: -1,
+	TABLE: -1,
+	COLUMN: -1,
 
 	FIELD: 0,
 	STRING: 0,
 	NUMBER: 0,
 	NULL: 0,
+
+	DROP: 1,
+	ADD: 1,
+	ALTER: 1,
+	CREATE: 1,
 
 	EQUAL: 1,
 	L_THAN: 1,
@@ -130,6 +170,10 @@ var precedenceMap = map[TokenType]int{
 	NOT: 1,
 	LIKE: 1,
 	IN: 1,
+	IF: 1,
+	EXISTS: 1,
+	PRIMARY: 1,
+	KEY: 1,
 
 	AND: 2,
 

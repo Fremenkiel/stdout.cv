@@ -21,11 +21,13 @@ func TestParseSql(t *testing.T) {
 				{ Type: FIELD, Text: "users" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "email" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: VALUES, Text: "VALUES" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
 				{ Type: STRING, Text: "test@gmail.dk" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: SEMICOL, Text: ";" },
@@ -39,7 +41,9 @@ func TestParseSql(t *testing.T) {
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
 				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "age" },
+				{ Type: COMMA, Text: "," },
 				{ Type: FIELD, Text: "email" },
 				{ Type: FROM, Text: "FROM" },
 				{ Type: FIELD, Text: "users" },
@@ -90,6 +94,96 @@ func TestParseSql(t *testing.T) {
 				{ Type: FIELD, Text: "name" },
 				{ Type: LIKE, Text: "LIKE" },
 				{ Type: STRING, Text: "%kevin%" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedErrorCode: -1,
+		},
+		{
+			name: "drop",
+			sql: "DROP TABLE IF EXISTS users;",
+			expectedTokens: []Token{
+				{ Type: DROP, Text: "DROP" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: IF, Text: "IF" },
+				{ Type: EXISTS, Text: "EXISTS" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedErrorCode: -1,
+		},
+		{
+			name: "alter_add",
+			sql: "ALTER TABLE users ADD COLUMN country varchar(128);",
+			expectedTokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: ADD, Text: "ADD" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "country" },
+				{ Type: FUNC, Text: "varchar" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: NUMBER, Text: "128" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedErrorCode: -1,
+		},
+		{
+			name: "alter_drop",
+			sql: "ALTER TABLE users DROP COLUMN country;",
+			expectedTokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: DROP, Text: "DROP" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "country" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedErrorCode: -1,
+		},
+		{
+			name: "alter_alter",
+			sql: "ALTER TABLE users ALTER COLUMN country varchar(256);",
+			expectedTokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "country" },
+				{ Type: FUNC, Text: "varchar" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: NUMBER, Text: "256" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedErrorCode: -1,
+		},
+		{
+			name: "create",
+			sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+			expectedTokens: []Token{
+				{ Type: CREATE, Text: "CREATE" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: FIELD, Text: "INTEGER" },
+				{ Type: PRIMARY, Text: "PRIMARY" },
+				{ Type: KEY, Text: "KEY" },
+				{ Type: COMMA, Text: "," },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "TEXT" },
+				{ Type: NOT, Text: "NOT" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: R_PARAN, Text: ")" },
 				{ Type: SEMICOL, Text: ";" },
 				{ Type: EOF, Text: "" },
 			},
@@ -239,6 +333,21 @@ func TestParseSql(t *testing.T) {
 			expectedErrorCode: -1,
 		},
 		{
+			name: "wildcard",
+			sql: "SELECT name, * FROM users;",
+			expectedTokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
+				{ Type: WILDCARD, Text: "*" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedErrorCode: -1,
+		},
+		{
 			name: "as",
 			sql: "SELECT name AS result FROM users WHERE id = 1;",
 			expectedTokens: []Token{
@@ -271,11 +380,7 @@ func TestParseSql(t *testing.T) {
 			err := parser.ParseSql(test.sql); 
 
 			typedErr, ok := errors.AsType[*Error](err)
-			if err != nil && !ok {
-				t.Fatalf("unexpected error, %v", err)
-			}
-
-			if test.expectedErrorCode != -1 {
+			if err != nil || test.expectedErrorCode != -1 {
 				if !ok {
 					t.Fatalf("unexpected error type, %v", err)
 				}
@@ -318,11 +423,13 @@ func TestParseQueryTokenStats(t *testing.T) {
 				{ Type: FIELD, Text: "users", LineNumber: 1, Start: 12, End: 17 },
 				{ Type: L_PARAN, Text: "(", LineNumber: 1, Start: 18, End: 19 },
 				{ Type: FIELD, Text: "name", LineNumber: 1, Start: 19, End: 23 },
+				{ Type: COMMA, Text: ",", LineNumber: 1, Start: 23, End: 24 },
 				{ Type: FIELD, Text: "email", LineNumber: 1, Start: 25, End: 30 },
 				{ Type: R_PARAN, Text: ")", LineNumber: 1, Start: 30, End: 31 },
 				{ Type: VALUES, Text: "VALUES", LineNumber: 1, Start: 32, End: 38 },
 				{ Type: L_PARAN, Text: "(", LineNumber: 1, Start: 39, End: 40 },
 				{ Type: STRING, Text: "kevin", LineNumber: 1, Start: 41, End: 46 },
+				{ Type: COMMA, Text: ",", LineNumber: 1, Start: 47, End: 48 },
 				{ Type: STRING, Text: "test@gmail.dk", LineNumber: 1, Start: 50, End: 63 },
 				{ Type: R_PARAN, Text: ")", LineNumber: 1, Start: 64, End: 65 },
 				{ Type: SEMICOL, Text: ";", LineNumber: 1, Start: 65, End: 66 },
@@ -605,27 +712,63 @@ func TestGetExecuteQueries(t *testing.T) {
 		{
 			name: "no_execute",
 			nodes: []Node{
-					&SelectNode{},
+					&SelectNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: SELECT,
+						},
+					},
+				},
 			},
 			expectedResponse: nil,
 		},
 		{
 			name: "only_execute",
 			nodes: []Node{
-					&UpdateNode{},
+					&UpdateNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: UPDATE,
+						},
+					},
+				},
 			},
 			expectedResponse: []Node{
-					&UpdateNode{},
+					&UpdateNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: UPDATE,
+						},
+					},
+				},
 				},
 		},
 		{
 			name: "update_and_select",
 			nodes: []Node{
-					&UpdateNode{},
-					&SelectNode{},
+					&UpdateNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: UPDATE,
+						},
+					},
+				},
+					&SelectNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: SELECT,
+						},
+					},
+				},
 			},
 			expectedResponse: []Node{
-					&UpdateNode{},
+					&UpdateNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: UPDATE,
+						},
+					},
+				},
 				},
 		},
 	}
@@ -660,22 +803,46 @@ func TestGetReturnQuery(t *testing.T) {
 		{
 			name: "no_return",
 			nodes: []Node{
-					&UpdateNode{},
+					&UpdateNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: UPDATE,
+						},
+					},
+				},
 			},
 			expectedResponse: nil,
 		},
 		{
 			name: "only_return",
 			nodes: []Node{
-					&SelectNode{},
+					&SelectNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: SELECT,
+						},
+					},
+				},
 			},
 			expectedResponse: &SelectNode{},
 		},
 		{
 			name: "update_and_select",
 			nodes: []Node{
-					&UpdateNode{},
-					&SelectNode{},
+					&UpdateNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: UPDATE,
+						},
+					},
+				},
+					&SelectNode{
+					baseNode: baseNode{
+						Token: Token{
+							Type: SELECT,
+						},
+					},
+				},
 			},
 			expectedResponse: &SelectNode{},
 		},

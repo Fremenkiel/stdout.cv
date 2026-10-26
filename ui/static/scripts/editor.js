@@ -57,6 +57,10 @@ function RenderErrorSnippet(id, lineNumber, startChar, endChar) {
 
   // mark line number as error
   snippet.doc.addLineClass(1, "wrap", "error-line")
+
+  // resize editor to line height
+  el.querySelector(".CodeMirror").style["height"] = 
+    el.querySelector(".CodeMirror-sizer").style["min-height"];
 }
 
 function ResetErrorSnippet(el) {

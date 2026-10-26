@@ -39,6 +39,9 @@ var (
 		INVALID_SELECT_STATEMENT:			"SELECT statement is invalidly formatted (INVALID_SELECT_STATEMENT)",
 		INVALID_UPDATE_STATEMENT:			"UPDATE statement is invalidly formatted (INVALID_UPDATE_STATEMENT)",
 		INVALID_DELETE_STATEMENT:			"DELETE statement is invalidly formatted (INVALID_DELETE_STATEMENT)",
+		INVALID_DROP_STATEMENT:				"DROP statement is invalidly formatted (INVALID_DROP_STATEMENT)",
+		INVALID_CREATE_STATEMENT:			"CREATE statement is invalidly formatted (INVALID_CREATE_STATEMENT)",
+		INVALID_ALTER_STATEMENT:			"ALTER statement is invalidly formatted (INVALID_ALTER_STATEMENT)",
 
 		INVALID_QUERY:								"Query is invalidly formatted (INVALID_QUERY)",
 		INVALID_QUERY_LEX_NUMBER:			"Query formatted error while lexing number (INVALID_QUERY_LEX_NUMBER)",
@@ -46,12 +49,14 @@ var (
 
 		INVALID_STRING:								"String is not correctly formatted, add termination (INVALID_STRING)",
 		INVALID_LIST_FORMAT:					"Invalid list format (INVALID_LIST_FORMAT)",
+		INVALID_CAST_FORMAT:					"Cast statement is invalidly formatted (INVALID_CAST_FORMAT)",
 		INVALID_FIELD:								"Unexpected token type while trying to parse field (INVALID_FIELD)",
 		INVALID_TYPE_FOR_PRECEDENCE:	"Invalid token type for expression, no precedence set (INVALID_TYPE_FOR_PRECEDENCE)",
 		INVALID_END_OF_STATEMENT:			"Statement is invalidly ended (INVALID_END_OF_STATEMENT)",
 		INVALID_BASE_NODE_TYPE:				"Base node type in not valid (INVALID_BASE_NODE_TYPE)",
 		INVALID_FUNC_CHAR:						"Func call is invalidly formatted (INVALID_FUNC_CHAR)",
 		INVALID_OPERATOR_TOKEN:				"Token is invalid as operator (INVALID_OPERATOR_TOKEN)",
+		INVALID_COLUMN_DEFINITION:		"Column definition is invalidly formatted (INVALID_COLUMN_DEFINITION)",
 
 		UNEXPECTED_EOF:								"Unexpected end of file (UNEXPECTED_EOF)",
 		UNKNOWN_BASE_NODE_TYPE:				"Unknown base node type recived, this might be a resulte of a falty part earlier in the query (UNKNOWN_BASE_NODE_TYPE)",
@@ -68,6 +73,9 @@ const (
 	INVALID_SELECT_STATEMENT
 	INVALID_UPDATE_STATEMENT
 	INVALID_DELETE_STATEMENT
+	INVALID_DROP_STATEMENT
+	INVALID_CREATE_STATEMENT
+	INVALID_ALTER_STATEMENT
 
 	INVALID_QUERY
 	INVALID_QUERY_LEX_NUMBER
@@ -75,12 +83,14 @@ const (
 
 	INVALID_STRING
 	INVALID_LIST_FORMAT
+	INVALID_CAST_FORMAT
 	INVALID_FIELD
 	INVALID_TYPE_FOR_PRECEDENCE
 	INVALID_END_OF_STATEMENT
 	INVALID_BASE_NODE_TYPE
 	INVALID_FUNC_CHAR
 	INVALID_OPERATOR_TOKEN
+	INVALID_COLUMN_DEFINITION
 
 	UNEXPECTED_EOF
 	UNKNOWN_BASE_NODE_TYPE
