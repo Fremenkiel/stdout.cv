@@ -277,7 +277,7 @@ func TestNewSelectNode(t *testing.T) {
 			name: "func",
 			tokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: SEMICOL, Text: ";" },
@@ -294,7 +294,7 @@ func TestNewSelectNode(t *testing.T) {
 			name: "func_as",
 			tokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: AS, Text: "AS" },
@@ -589,7 +589,6 @@ func TestNewDeleteNode(t *testing.T) {
 		name							string
 		tokens						[]Token
 		expectedResponse  string
-		expectedColumns		[]string
 		expectedTable			Node
 		expectedErrorCode	ErrorCode
 	} {
@@ -603,7 +602,6 @@ func TestNewDeleteNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "DELETE FROM users;",
-			expectedColumns: []string{},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
@@ -621,7 +619,6 @@ func TestNewDeleteNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "DELETE FROM users WHERE id = 1;",
-			expectedColumns: []string{},
 			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
@@ -638,7 +635,6 @@ func TestNewDeleteNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "",
-			expectedColumns: nil,
 			expectedTable: nil,
 			expectedErrorCode: INVALID_DELETE_STATEMENT,
 		},
@@ -653,7 +649,6 @@ func TestNewDeleteNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "",
-			expectedColumns: nil,
 			expectedTable: nil,
 			expectedErrorCode: INVALID_DELETE_STATEMENT,
 		},
@@ -683,11 +678,8 @@ func TestNewDeleteNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
-			for i := range cols {
-				if str := cols[i]; test.expectedColumns[i] != str {
-					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
-				}
+			if cols := response.Columns(); cols != nil {
+					t.Fatalf("unexpected cols, nil got %v", cols)
 			}
 
 			if response.Table() == nil && test.expectedTable == nil {
@@ -810,9 +802,237 @@ func TestNewDropNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
-			if cols != nil {
+			if cols := response.Columns(); cols != nil {
 				t.Fatalf("unexpected column, nil got %v", cols)
+			}
+
+			if response.Table() == nil && test.expectedTable == nil {
+				return
+			}
+
+			if str := response.Table().String(); test.expectedTable.String() != str {
+				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
+			}
+
+		})
+	}
+}
+
+func TestNewAlterNode(t *testing.T) {
+	tests := []struct{
+		name							string
+		tokens						[]Token
+		expectedResponse  string
+		expectedTable			Node
+		expectedErrorCode	ErrorCode
+	} {
+		{
+			name: "add_column",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: ADD, Text: "ADD" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: FIELD, Text: "INTEGER" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "ALTER TABLE users ADD COLUMN age INTEGER;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "alter_column",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "TEXT" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "ALTER TABLE users ALTER COLUMN name TEXT;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "drop_column",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: DROP, Text: "DROP" },
+				{ Type: COLUMN, Text: "COLUMN" },
+				{ Type: FIELD, Text: "age" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "ALTER TABLE users DROP COLUMN age;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "rename",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: RENAME, Text: "RENAME" },
+				{ Type: TO, Text: "TO" },
+				{ Type: FIELD, Text: "accounts" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "ALTER TABLE users RENAME TO accounts;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "add",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: ADD, Text: "ADD" },
+				{ Type: FIELD, Text: "created_at" },
+				{ Type: FIELD, Text: "TIMESTAMP" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "ALTER TABLE users ADD created_at TIMESTAMP;",
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "add_null",
+			tokens: []Token{
+				{ Type: ALTER, Text: "ALTER" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: ADD, Text: "ADD" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedTable: nil,
+			expectedErrorCode: INVALID_ALTER_STATEMENT,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				tokens: test.tokens,
+				r: 0,
+			}
+
+			response, err := newAlterNode(parser)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil || test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
+				return
+			}
+
+			if str := response.String(); test.expectedResponse != str {
+				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
+			}
+
+			if cols := response.Columns(); cols != nil {
+				t.Fatalf("unexpected column, nil got %v", cols)
+			}
+
+			if response.Table() == nil && test.expectedTable == nil {
+				return
+			}
+
+			if str := response.Table().String(); test.expectedTable.String() != str {
+				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
+			}
+
+		})
+	}
+}
+
+func TestNewCreateNode(t *testing.T) {
+	tests := []struct{
+		name							string
+		tokens						[]Token
+		expectedResponse  string
+		expectedColumns		[]string
+		expectedTable			Node
+		expectedErrorCode	ErrorCode
+	} {
+		{
+			name: "craete",
+			tokens: []Token{
+				{ Type: CREATE, Text: "CRATE" },
+				{ Type: TABLE, Text: "TABLE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: FIELD, Text: "INTEGER" },
+				{ Type: PRIMARY, Text: "PRIMARY" },
+				{ Type: KEY, Text: "KEY" },
+				{ Type: COMMA, Text: "," },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FIELD, Text: "TEXT" },
+				{ Type: NOT, Text: "NOT" },
+				{ Type: NULL, Text: "NULL" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+			expectedColumns: []string{
+				"id",
+				"name",
+			},
+			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parser := &Parser{
+				tokens: test.tokens,
+				r: 0,
+			}
+
+			response, err := newCreateNode(parser)
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil || test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
+				return
+			}
+
+			if str := response.String(); test.expectedResponse != str {
+				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
+			}
+
+			cols := response.Columns()
+			for i := range cols {
+				if str := cols[i]; test.expectedColumns[i] != str {
+					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
+				}
 			}
 
 			if response.Table() == nil && test.expectedTable == nil {
@@ -909,7 +1129,7 @@ func TestNewFieldNode(t *testing.T) {
 		{
 			name: "func",
 			tokens: []Token{
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: EOF, Text: "" },
@@ -924,7 +1144,7 @@ func TestNewFieldNode(t *testing.T) {
 		{
 			name: "func_as",
 			tokens: []Token{
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: AS, Text: "AS" },
@@ -1471,7 +1691,7 @@ func TestNewFuncNode(t *testing.T) {
 		{
 			name: "func",
 			tokens: []Token{
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: EOF, Text: "" },
@@ -1486,7 +1706,7 @@ func TestNewFuncNode(t *testing.T) {
 		{
 			name: "func_infix",
 			tokens: []Token{
-				{ Type: FUNC, Text: "CONCAT" },
+				{ Type: FIELD, Text: "CONCAT" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: FIELD, Text: "name" },
 				{ Type: STRING, Text: "kevin" },
@@ -1504,7 +1724,7 @@ func TestNewFuncNode(t *testing.T) {
 		{
 			name: "invalid",
 			tokens: []Token{
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: EOF, Text: "" },
 			},
@@ -1621,7 +1841,7 @@ func TestNewListNode(t *testing.T) {
 			name: "func",
 			tokens: []Token{
 				{ Type: L_PARAN, Text: "(" },
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: COMMA, Text: "," },

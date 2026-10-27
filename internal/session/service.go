@@ -116,6 +116,25 @@ func (s *Service) RemoveExpiredSessions() error {
 	return returnErr
 }
 
+// Get the size of the session database.
+func (s *Service) GetDatabaseSize(ctx context.Context, id string) (int64, error) {
+	if ctx.Err() != nil {
+		return -1, ctx.Err()
+	}
+
+	fileName, err := s.cache.GetFile(id)
+	if err != nil {
+		return -1, err
+	}
+
+	file, err := os.Stat(fileName)
+	if err != nil {
+		return -1, err
+	}
+
+	return file.Size(), nil
+}
+
 func (s *Service) createSessionDatabase(id string) error {
 	databaseName := s.cache.AddFile(id)
 	srcFile, err := db.Files.ReadFile("template.db")

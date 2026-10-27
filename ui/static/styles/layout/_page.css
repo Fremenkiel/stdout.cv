@@ -7,6 +7,7 @@
 }
 
 .page__nav {
+  position: relative;
   grid-area: nav;
   height: 100vh;
   width: var(--size-nav-width);

@@ -156,6 +156,18 @@ func (p *Parser) peakToken() Token {
 	return p.tokens[p.r + 1]
 }
 
+func (p *Parser) currentIsTable() bool {
+	if p.r == 0 {
+		return false
+	}
+
+	if p.tokens[p.r - 1].isTablePrefix() {
+		return true
+	}
+
+	return false
+}
+
 func (p *Parser) currentToken() Token {
 	if p.r >= len(p.tokens) {
 		return Token{}

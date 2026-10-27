@@ -123,7 +123,7 @@ func TestParseSql(t *testing.T) {
 				{ Type: ADD, Text: "ADD" },
 				{ Type: COLUMN, Text: "COLUMN" },
 				{ Type: FIELD, Text: "country" },
-				{ Type: FUNC, Text: "varchar" },
+				{ Type: FIELD, Text: "varchar" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: NUMBER, Text: "128" },
 				{ Type: R_PARAN, Text: ")" },
@@ -157,7 +157,7 @@ func TestParseSql(t *testing.T) {
 				{ Type: ALTER, Text: "ALTER" },
 				{ Type: COLUMN, Text: "COLUMN" },
 				{ Type: FIELD, Text: "country" },
-				{ Type: FUNC, Text: "varchar" },
+				{ Type: FIELD, Text: "varchar" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: NUMBER, Text: "256" },
 				{ Type: R_PARAN, Text: ")" },
@@ -194,7 +194,7 @@ func TestParseSql(t *testing.T) {
 			sql: "SELECT now();",
 			expectedTokens: []Token{
 				{ Type: SELECT, Text: "SELECT" },
-				{ Type: FUNC, Text: "now" },
+				{ Type: FIELD, Text: "now" },
 				{ Type: L_PARAN, Text: "(" },
 				{ Type: R_PARAN, Text: ")" },
 				{ Type: SEMICOL, Text: ";" },
@@ -500,6 +500,31 @@ func TestParseQueryTable(t *testing.T) {
 			sql: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: "users",
 		},
+		{
+			name: "create",
+			sql: "CREATE TABLE users(id INTEGER PRIMARY KEY);",
+			expectedResponse: "users",
+		},
+		{
+			name: "drop",
+			sql: "DROP TABLE users;",
+			expectedResponse: "users",
+		},
+		{
+			name: "alter_add",
+			sql: "ALTER TABLE users ADD COLUMN age INTEGER NOT NULL;",
+			expectedResponse: "users",
+		},
+		{
+			name: "alter_alter",
+			sql: "ALTER TABLE users ALTER COLUMN age INTEGER;",
+			expectedResponse: "users",
+		},
+		{
+			name: "alter_drop",
+			sql: "ALTER TABLE users DROP COLUMN age INTEGER;",
+			expectedResponse: "users",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -554,6 +579,31 @@ func TestParseQueryColumns(t *testing.T) {
 			sql: "DELETE FROM users WHERE id = 1;",
 			expectedResponse: []string{},
 		},
+		{
+			name: "create",
+			sql: "CREATE TABLE users(id INTEGER PRIMARY KEY);",
+			expectedResponse: []string{"id"},
+		},
+		{
+			name: "drop",
+			sql: "DROP TABLE users;",
+			expectedResponse: []string{},
+		},
+		{
+			name: "alter_add",
+			sql: "ALTER TABLE users ADD COLUMN age INTEGER NOT NULL;",
+			expectedResponse: []string{"age"},
+		},
+		{
+			name: "alter_alter",
+			sql: "ALTER TABLE users ALTER COLUMN age INTEGER;",
+			expectedResponse: []string{"age"},
+		},
+		{
+			name: "alter_drop",
+			sql: "ALTER TABLE users DROP COLUMN age INTEGER;",
+			expectedResponse: []string{},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -597,6 +647,26 @@ func TestParseQueryToString(t *testing.T) {
 		{
 			name: "delete",
 			sql: "DELETE FROM users WHERE id = 1;",
+		},
+		{
+			name: "create",
+			sql: "CREATE TABLE users(id INTEGER PRIMARY KEY);",
+		},
+		{
+			name: "drop",
+			sql: "DROP TABLE users;",
+		},
+		{
+			name: "alter_add",
+			sql: "ALTER TABLE users ADD COLUMN age INTEGER NOT NULL;",
+		},
+		{
+			name: "alter_alter",
+			sql: "ALTER TABLE users ALTER COLUMN age INTEGER;",
+		},
+		{
+			name: "alter_drop",
+			sql: "ALTER TABLE users DROP COLUMN age INTEGER;",
 		},
 	}
 	for _, test := range tests {

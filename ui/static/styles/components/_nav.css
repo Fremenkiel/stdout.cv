@@ -39,3 +39,25 @@
 .nav__list>li {
   margin-bottom: calc(var(--size-margin-y) / 2);
 }
+
+.nav__footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: var(--size-margin-y) var(--size-nav-margin-x);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav__footer .footer__reference {
+  display: flex;
+}
+
+.nav__footer svg {
+  height: 24px;
+  width: 24px;
+  stroke: var(--color-text-primary);
+  stroke-width: 2px;
+}

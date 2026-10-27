@@ -658,7 +658,7 @@ func TestNextKeyword(t *testing.T) {
 		{
 			name: "func",
 			query: "now() ",
-			expectedResponse: Token{ Type: FUNC, Text: "now" },
+			expectedResponse: Token{ Type: FIELD, Text: "now" },
 			expectedErrorCode: -1,
 			expectedErrorLineNumber: -1,
 			expectedErrorCharStartNumber: -1,

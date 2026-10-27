@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/fremenkiel/stdout.cv/internal/column"
+	"github.com/fremenkiel/stdout.cv/internal/database"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
@@ -15,16 +16,17 @@ type Renderer interface {
 	RenderFragment(w http.ResponseWriter, name string, data any) error
 }
 
-type TableService interface {
+type service interface {
 	GetTables(ctx context.Context) ([]*Table, error)
+	GetStats(ctx context.Context) (*database.Stats, error)
 }
 
 type Handler struct {
 	renderer	Renderer
-	service		TableService
+	service		service
 }
 
-func NewHandler(r Renderer, s TableService) *Handler {
+func NewHandler(r Renderer, s service) *Handler {
 	return &Handler{renderer: r, service: s}
 }
 
@@ -41,6 +43,17 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stats, err := h.service.GetStats(ctx)
+	if err != nil {
+		logger.LogError(
+			"table/handler",
+			"error returned while getting stats",
+			slog.Any("error", err),
+			)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	if err := ctx.Err(); err != nil {
 		logger.LogError(
 			"table/handler",
@@ -51,7 +64,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData := h.getTableViewData(tables)
+	viewData := h.getTableViewData(tables, stats)
 
 	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
 		logger.LogError(
@@ -63,9 +76,13 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getTableViewData(tables []*Table) *viewmodels.TableViewData {
+func (h *Handler) getTableViewData(tables []*Table, stats *database.Stats) *viewmodels.TableViewData {
 	viewData := &viewmodels.TableViewData{
 		Tables: make([]viewmodels.Table, len(tables)),
+		Stats: viewmodels.DatabaseStats{
+			Version: stats.Version,
+			Size: stats.Size,
+		},
 		Error: nil,
 		Result: &viewmodels.Result{},
 	}

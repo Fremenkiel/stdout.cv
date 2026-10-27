@@ -1,9 +1,8 @@
 - Simplify tests
 - Fix test
 - Fill out database
-- Ui error message
-- Add db version and size
 - System query block tests
-- Git link
-- ALTER FIX
 - Update sidebar on table change
+- Comment
+- Database test
+- Better error handling on index

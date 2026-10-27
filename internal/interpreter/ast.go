@@ -801,6 +801,25 @@ func newAlterNode(parser *Parser) (Node, error) {
 
 	node.table = table
 
+	actionMap, ok := alterMap[parser.currentToken().Type]
+	if !ok {
+		return nil, NewError(
+			INVALID_ALTER_STATEMENT,
+			parser.currentToken().LineNumber,
+			parser.currentToken().End,
+			parser.currentToken().Text,
+			)
+	}
+
+	if _, ok := actionMap[parser.peakToken().Type]; !ok {
+		return nil, NewError(
+			INVALID_ALTER_STATEMENT,
+			parser.currentToken().LineNumber,
+			parser.currentToken().End,
+			parser.currentToken().Text,
+			)
+	}
+
 	operator, err := newOperatorNode(parser)
 	if err != nil {
 		return nil, err
@@ -838,6 +857,8 @@ func (a *AlterNode) String() string {
 	buf.WriteString(" ")
 
 	buf.WriteString(a.operator.String())
+	buf.WriteString(" ")
+	buf.WriteString(a.column.String())
 
 	buf.WriteString(";")
 
@@ -865,8 +886,8 @@ func newFieldNode(parser *Parser) (Node, error) {
 
 	var node Node
 
-	switch parser.currentToken().Type {
-	case FUNC: 
+	switch {
+	case parser.peakToken().Type == L_PARAN && !parser.currentIsTable(): 
 		funcNode, err := newFuncNode(parser)
 		if err != nil {
 			return nil, err
@@ -960,8 +981,11 @@ func (c *ColumnNode) String() string {
 	var buf bytes.Buffer
 
 	buf.WriteString(c.Token.Text)
-	buf.WriteString(" ")
-	buf.WriteString(c.definition.String())
+
+	if definition := c.definition.String(); len(definition) > 0 {
+		buf.WriteString(" ")
+		buf.WriteString(definition)
+	}
 
 	return buf.String()
 }
@@ -1242,7 +1266,7 @@ var _ Node = (*FuncNode)(nil)
 func newFuncNode(parser *Parser) (Node, error) {
 	var node FuncNode
 
-	if parser.currentToken().Type != FUNC {
+	if parser.currentToken().Type != FIELD {
 		return nil, NewError(
 			INVALID_BASE_NODE_TYPE,
 			parser.currentToken().LineNumber,

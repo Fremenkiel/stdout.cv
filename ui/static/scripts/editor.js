@@ -1,3 +1,23 @@
+CodeMirror.prototype.getSelectedText = function () {
+  const selected = this.doc.getSelection();
+
+  if (selected.length > 0) {
+    const pos = this.doc.getCursor("from");
+    return {
+      value: selected,
+      lineNumber: pos.line,
+      startChar: pos.ch,
+    };
+  }
+
+  const value = this.doc.getValue();
+  return {
+    value,
+    lineNumber: 0,
+    startChar: 0,
+  };
+}
+
 const editor = CodeMirror.fromTextArea(document.getElementById('textarea-query'), {
   lineNumbers: true,
   mode: 'text/x-sql',
@@ -20,6 +40,17 @@ function RenderErrorSnippet(id, lineNumber, startChar, endChar) {
   // if line number is not set, don't show snippet
   if (lineNumber === 0) {
     return;
+  }
+
+  const selected = editor.getSelectedText();
+
+  if (selected.lineNumber !== 0) {
+    lineNumber += selected.lineNumber;
+  }
+
+  if (selected.startChar !== 0) {
+    startChar += selected.startChar;
+    endChar += selected.startChar;
   }
 
   const lineIndex = lineNumber - 1;
@@ -68,4 +99,3 @@ function ResetErrorSnippet(el) {
     el.childNodes[i].remove();
   }
 }
-

@@ -27,17 +27,9 @@ htmx.defineExtension('submit-cm-selection', {
 
       const editor = firstChild(evt.detail.elt, ".CodeMirror");
 
-      const selected = editor.CodeMirror.getSelection();
-      const value = editor.CodeMirror.getValue();
+      const selected = editor.CodeMirror.getSelectedText();
 
-      var paramValue = "";
-      if (selected.length > 0) {
-        paramValue = selected;
-      } else {
-        paramValue = value;
-      }
-
-      overrideObject(evt.detail.parameters, name, paramValue);
+      overrideObject(evt.detail.parameters, name, selected.value);
     }
   },
 });

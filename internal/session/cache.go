@@ -87,6 +87,7 @@ func (c *Cache) RemoveFile(id string) {
 	c.files.Delete(id)
 }
 
+// Gets file path based on session id.
 func (c *Cache) GetFile(id string) (string, error) {
 	str, ok := c.files.Load(id)
 	if !ok {

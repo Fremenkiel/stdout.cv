@@ -300,10 +300,6 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		return l.newToken(KEY, keyword), nil
 	}
 
-	if p == '(' {
-		return l.newToken(FUNC, keyword), nil
-	}
-
 	return l.newToken(FIELD, keyword), nil
 }
 

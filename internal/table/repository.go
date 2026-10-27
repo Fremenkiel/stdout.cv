@@ -17,7 +17,7 @@ type Repository struct {
 	sessionCache	SessionCache
 }
 
-var _ TableRepository = (*Repository)(nil)
+var _ repository = (*Repository)(nil)
 
 func NewRepository(sc SessionCache) *Repository {
 	return &Repository{sessionCache: sc}

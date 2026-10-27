@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/database"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
 	"github.com/fremenkiel/stdout.cv/internal/query"
@@ -48,14 +49,16 @@ func main() {
 		os.Getenv("DATABASE_FILE_TEMPLATE"),
 		)
 
-	queryRepo := query.NewRepository(sessionCache)
-	schemaRepo := schema.NewRepository(sessionCache)
-	tableRepo := table.NewRepository(sessionCache)
+	databaseRepo		:= database.NewRepository(sessionCache)
+	queryRepo 			:= query.NewRepository(sessionCache)
+	schemaRepo			:= schema.NewRepository(sessionCache)
+	tableRepo				:= table.NewRepository(sessionCache)
 
-	schemaService := schema.NewService(schemaRepo)
-	rowService := query.NewService(queryRepo, schemaService)
-	sessionService := session.NewService(sessionCache)
-	tableService := table.NewService(tableRepo, schemaService)
+	schemaService		:= schema.NewService(schemaRepo)
+	sessionService	:= session.NewService(sessionCache)
+	databaseService	:= database.NewService(databaseRepo, sessionService)
+	rowService			:= query.NewService(queryRepo, schemaService)
+	tableService		:= table.NewService(tableRepo, databaseService, schemaService)
 
 	renderer := ui.NewRenderer()
 
