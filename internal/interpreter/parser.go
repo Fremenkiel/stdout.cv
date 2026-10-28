@@ -2,8 +2,8 @@ package interpreter
 
 type Parser struct {
 	lexer 		*Lexer
-	handlers	map[TokenType]func(*Parser) (Node, error)
-	trees   	[]Node
+	handlers	map[TokenType]func(*Parser) (BaseNode, error)
+	trees   	[]BaseNode
 
 	r					int
 	tokens		[]Token
@@ -12,7 +12,7 @@ type Parser struct {
 func NewParser() *Parser {
 	parser := &Parser{
 		lexer: NewLexer(),
-		handlers: map[TokenType]func(*Parser) (Node, error) {
+		handlers: map[TokenType]func(*Parser) (BaseNode, error) {
 			INSERT:	newInsetNode,
 			SELECT:	newSelectNode,
 			UPDATE: newUpdateNode,
@@ -27,7 +27,7 @@ func NewParser() *Parser {
 }
 
 func (p *Parser) ParseSql(sql string) error {
-	p.trees = make([]Node, 0, 1)
+	p.trees = make([]BaseNode, 0, 3)
 	p.lexer.Write(sql)
 	p.r = 0
 
@@ -70,7 +70,7 @@ func (p *Parser) ParseSql(sql string) error {
 	return nil
 }
 
-func (p *Parser) GetExecureQueries() []Node {
+func (p *Parser) GetExecureQueries() []BaseNode {
 	var mod int = 0
 	if rq := p.GetReturnQuery(); rq != nil {
 		mod = 1
@@ -83,16 +83,30 @@ func (p *Parser) GetExecureQueries() []Node {
 	return p.trees[0:len(p.trees) - mod]
 }
 
-func (p *Parser) GetReturnQuery() Node {
+func (p *Parser) GetReturnQuery() BaseNode {
 	if len(p.trees) == 0 {
 		return nil
 	}
 
-	if rq := p.trees[len(p.trees) - 1]; rq.TokenType() == SELECT {
+	if rq := p.trees[len(p.trees) - 1]; rq.returnsValue() {
 		return rq
 	}
 
 	return nil
+}
+
+func (p *Parser) AltersDatabase() bool {
+	if len(p.trees) == 0 {
+		return false
+	}
+
+	for i := range p.trees {
+		if p.trees[i].altersSchema() || p.trees[i].altersRows() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *Parser) expressionParse(basePrecedence int) (Node, error) {

@@ -18,6 +18,10 @@ func NewContext(ctx context.Context, id string) context.Context {
 }
 
 func FromContext(ctx context.Context) (Id, error) {
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+
 	id, ok := ctx.Value(idKey).(string)
 	if !ok {
 		return "", ErrNoSessionInContext

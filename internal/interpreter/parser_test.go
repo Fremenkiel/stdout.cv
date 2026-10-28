@@ -776,16 +776,18 @@ func TestExpressionParse(t *testing.T) {
 func TestGetExecuteQueries(t *testing.T) {
 	tests := []struct{
 		name							string
-		nodes							[]Node
-		expectedResponse  []Node
+		nodes							[]BaseNode
+		expectedResponse  []BaseNode
 	} {
 		{
 			name: "no_execute",
-			nodes: []Node{
-					&SelectNode{
+			nodes: []BaseNode{
+				&SelectNode{
 					baseNode: baseNode{
+						baseToken: baseToken{
 						Token: Token{
 							Type: SELECT,
+						},
 						},
 					},
 				},
@@ -794,52 +796,62 @@ func TestGetExecuteQueries(t *testing.T) {
 		},
 		{
 			name: "only_execute",
-			nodes: []Node{
-					&UpdateNode{
+			nodes: []BaseNode{
+				&UpdateNode{
 					baseNode: baseNode{
+						baseToken: baseToken{
 						Token: Token{
 							Type: UPDATE,
+						},
 						},
 					},
 				},
 			},
-			expectedResponse: []Node{
-					&UpdateNode{
+			expectedResponse: []BaseNode{
+				&UpdateNode{
 					baseNode: baseNode{
+						baseToken: baseToken{
 						Token: Token{
 							Type: UPDATE,
 						},
+						},
 					},
 				},
-				},
+			},
 		},
 		{
 			name: "update_and_select",
-			nodes: []Node{
-					&UpdateNode{
+			nodes: []BaseNode{
+				&UpdateNode{
 					baseNode: baseNode{
+						baseToken: baseToken{
 						Token: Token{
 							Type: UPDATE,
 						},
+						},
 					},
 				},
-					&SelectNode{
+				&SelectNode{
 					baseNode: baseNode{
+						baseToken: baseToken{
 						Token: Token{
 							Type: SELECT,
+						},
 						},
 					},
 				},
 			},
-			expectedResponse: []Node{
-					&UpdateNode{
+			expectedResponse: []BaseNode{
+				&UpdateNode{
 					baseNode: baseNode{
+						baseToken: baseToken{
 						Token: Token{
 							Type: UPDATE,
 						},
+						},
 					},
 				},
-				},
+			},
 		},
 	}
 
@@ -867,16 +879,18 @@ func TestGetExecuteQueries(t *testing.T) {
 func TestGetReturnQuery(t *testing.T) {
 	tests := []struct{
 		name							string
-		nodes							[]Node
+		nodes							[]BaseNode
 		expectedResponse  Node
 	} {
 		{
 			name: "no_return",
-			nodes: []Node{
-					&UpdateNode{
+			nodes: []BaseNode{
+				&UpdateNode{
 					baseNode: baseNode{
-						Token: Token{
-							Type: UPDATE,
+						baseToken: baseToken{
+							Token: Token{
+								Type: UPDATE,
+							},
 						},
 					},
 				},
@@ -885,11 +899,13 @@ func TestGetReturnQuery(t *testing.T) {
 		},
 		{
 			name: "only_return",
-			nodes: []Node{
-					&SelectNode{
+			nodes: []BaseNode{
+				&SelectNode{
 					baseNode: baseNode{
-						Token: Token{
-							Type: SELECT,
+						baseToken: baseToken{
+							Token: Token{
+								Type: SELECT,
+							},
 						},
 					},
 				},
@@ -898,18 +914,22 @@ func TestGetReturnQuery(t *testing.T) {
 		},
 		{
 			name: "update_and_select",
-			nodes: []Node{
-					&UpdateNode{
+			nodes: []BaseNode{
+				&UpdateNode{
 					baseNode: baseNode{
-						Token: Token{
-							Type: UPDATE,
+						baseToken: baseToken{
+							Token: Token{
+								Type: UPDATE,
+							},
 						},
 					},
 				},
-					&SelectNode{
+				&SelectNode{
 					baseNode: baseNode{
-						Token: Token{
-							Type: SELECT,
+						baseToken: baseToken{
+							Token: Token{
+								Type: SELECT,
+							},
 						},
 					},
 				},
@@ -936,4 +956,4 @@ func TestGetReturnQuery(t *testing.T) {
 		})
 	}
 }
-  
+

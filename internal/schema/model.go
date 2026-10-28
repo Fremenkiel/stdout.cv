@@ -1,4 +1,12 @@
-package column
+package schema
+
+type Schema = []*Table
+
+type Table struct {
+	Name			string
+	RowCount	int16
+	Columns		[]*Column
+}
 
 type Column struct {
 	Cid						int16

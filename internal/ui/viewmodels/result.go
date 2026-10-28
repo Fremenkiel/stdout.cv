@@ -1,14 +1,12 @@
 package viewmodels
 
-type ResultViewData Result
-
 type Result struct {
-	Stats		*Stats
+	Stats		*ResultStats
 	Columns	ColumnList
 	Rows		RowList
 }
 
-type Stats struct {
+type ResultStats struct {
 	RowCount,
 	ColumnCount		uint16
 	Duration			int64

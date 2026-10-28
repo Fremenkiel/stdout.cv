@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/fremenkiel/stdout.cv/internal/database"
+	"github.com/fremenkiel/stdout.cv/internal/schema"
+	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
@@ -12,13 +15,13 @@ func TestServiceRun(t *testing.T) {
 	tests := []struct{
 		name,
 		query							string
-		expectedResponse	*Query
+		expectedResponse	*Result
 		expectedError			error
 	} {
 		{
 			name: "get_rows",
 			query: "users",
-			expectedResponse: &Query{
+			expectedResponse: &Result{
 				Rows: []*Row{
 					{
 						stringPtr("1"),
@@ -44,6 +47,7 @@ func TestServiceRun(t *testing.T) {
 			service := NewService(
 				&mockRepository{},
 				NewMockSchemaService(),
+				NewMockDataabaseService(),
 				)
 
 			response, err := service.Run(ctx, fmt.Sprintf("SELECT * FROM %s;", test.query))
@@ -55,16 +59,16 @@ func TestServiceRun(t *testing.T) {
 				return
 			}
 
-			if len(test.expectedResponse.Rows) != len(response.Rows) {
-				t.Fatalf("unexpected row len, %d got %d", len(test.expectedResponse.Rows), len(response.Rows))
+			if len(test.expectedResponse.Rows) != len(response.Result.Rows) {
+				t.Fatalf("unexpected row len, %d got %d", len(test.expectedResponse.Rows), len(response.Result.Rows))
 			}
 
-			if !testutil.SliceEql(test.expectedResponse.Columns, response.Columns) {
-				t.Fatalf("unexpected column slice, %v got %v", test.expectedResponse.Columns, response.Columns)
+			if !testutil.SliceEql(test.expectedResponse.Columns, response.Result.Columns) {
+				t.Fatalf("unexpected column slice, %v got %v", test.expectedResponse.Columns, response.Result.Columns)
 			}
 
-			for i := range response.Rows {
-				row := response.Rows[i]
+			for i := range response.Result.Rows {
+				row := response.Result.Rows[i]
 				expectedRow := test.expectedResponse.Rows[i]
 
 				if len(*expectedRow) != len(*row) {
@@ -106,7 +110,7 @@ type mockSchemaService struct {
 	tableSchema	[]string
 }
 
-var _ SchemaService = (*mockSchemaService)(nil)
+var _ schemaService = (*mockSchemaService)(nil)
 
 func NewMockSchemaService() *mockSchemaService {
 	return &mockSchemaService{
@@ -117,6 +121,26 @@ func NewMockSchemaService() *mockSchemaService {
 			"age",
 		},
 	}
+}
+
+func (m *mockSchemaService) GetSchema(ctx context.Context) (schema.Schema, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	return schema.Schema{
+		{
+			Name: "test_table",
+			RowCount: 876,
+			Columns: []*schema.Column{
+				{
+					Name: "test_col",
+					Type: "INTEGER",
+				},
+			},
+		},
+	}, nil
 }
 
 func (s *mockSchemaService) AppendWildcardSchema(ctx context.Context, tableName string, fields []string) ([]string, error) {
@@ -131,3 +155,24 @@ func stringPtr(s string) *string {
 	return &s
 }
 
+type mockDatabaseService struct {
+}
+
+var _ databaseService = (*mockDatabaseService)(nil)
+
+func NewMockDataabaseService() *mockDatabaseService {
+	return &mockDatabaseService{
+	}
+}
+
+func (m *mockDatabaseService) GetStats(ctx context.Context) (*database.Stats, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	return &database.Stats{
+		Version: "0.1.0",
+		Size: 100,
+	}, nil
+}

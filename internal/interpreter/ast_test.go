@@ -39,7 +39,7 @@ func TestNewInsertNode(t *testing.T) {
 				"name",
 				"age",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -173,7 +173,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -190,7 +190,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "public.users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "public.users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -211,7 +211,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -231,7 +231,7 @@ func TestNewSelectNode(t *testing.T) {
 				"name",
 				"age",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -251,7 +251,7 @@ func TestNewSelectNode(t *testing.T) {
 				"name",
 				"*",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -270,7 +270,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedColumns: []string{
 				"first_name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -325,7 +325,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -447,7 +447,7 @@ func TestNewUpdateNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -470,7 +470,7 @@ func TestNewUpdateNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -536,7 +536,7 @@ func TestNewUpdateNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 	}
@@ -602,7 +602,7 @@ func TestNewDeleteNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "DELETE FROM users;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -619,7 +619,7 @@ func TestNewDeleteNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "DELETE FROM users WHERE id = 1;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -712,7 +712,7 @@ func TestNewDropNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "DROP TABLE users;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -727,7 +727,7 @@ func TestNewDropNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "DROP TABLE IF EXISTS users;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -840,7 +840,7 @@ func TestNewAlterNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "ALTER TABLE users ADD COLUMN age INTEGER;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -857,7 +857,7 @@ func TestNewAlterNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "ALTER TABLE users ALTER COLUMN name TEXT;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -873,7 +873,7 @@ func TestNewAlterNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "ALTER TABLE users DROP COLUMN age;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -889,7 +889,7 @@ func TestNewAlterNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "ALTER TABLE users RENAME TO accounts;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -905,7 +905,7 @@ func TestNewAlterNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "ALTER TABLE users ADD created_at TIMESTAMP;",
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -999,7 +999,7 @@ func TestNewCreateNode(t *testing.T) {
 				"id",
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "users" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
 	}
@@ -1069,7 +1069,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedColumns: []string{
 				"name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "name" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "name" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -1084,7 +1084,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedColumns: []string{
 				"first_name",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "name" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "name" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -1097,7 +1097,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedColumns: []string{
 				"'kevin'",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "'kevin'" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "'kevin'" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -1110,7 +1110,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedColumns: []string{
 				"1",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "1" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "1" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -1123,7 +1123,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedColumns: []string{
 				"1",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "1" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "1" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -1155,7 +1155,7 @@ func TestNewFieldNode(t *testing.T) {
 			expectedColumns: []string{
 				"time",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "now()" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "now()" } } },
 			expectedErrorCode: -1,
 		},
 		{
@@ -1587,7 +1587,7 @@ func TestNewCastNode(t *testing.T) {
 			expectedColumns: []string{
 				"identifier",
 			},
-			expectedTable: &FieldNode{ baseNode{ Token{ Type: FIELD, Text: "id" } } },
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "id" } } },
 			expectedErrorCode: -1,
 		},
 		{

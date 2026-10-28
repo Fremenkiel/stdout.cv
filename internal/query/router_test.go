@@ -11,29 +11,50 @@ import (
 )
 
 func TestNewRouter(t *testing.T) {
-	mux := http.NewServeMux()
-
-	handler := &Handler{
-		testutil.NewRenderer(),
-		&mockService{},
+	tests := []struct{
+		name							string
+		url								string
+		expectedResponse  int
+	} {
+		{
+			name: "index",
+			url: "/",
+			expectedResponse: http.StatusOK,
+		},
+		{
+			name: "query",
+			url: "/query?sql=select%20name%20from%20users%3B%0A",
+			expectedResponse: http.StatusOK,
+		},
 	}
 
-	NewRouter(mux, handler)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mux := http.NewServeMux()
 
-	req := httptest.NewRequestWithContext(
-		context.WithValue(t.Context(), "session_key", "test"),
-		http.MethodGet, "/query?sql=select%20name%20from%20users%3B%0A", nil)
+			handler := &Handler{
+				testutil.NewRenderer(),
+				&mockService{},
+			}
 
-	rr := httptest.NewRecorder()
+			NewRouter(mux, handler)
 
-	mux.ServeHTTP(rr, req)
+			req := httptest.NewRequestWithContext(
+				context.WithValue(t.Context(), "session_key", "test"),
+				http.MethodGet, test.url, nil)
 
-	if http.StatusOK != rr.Code {
-		t.Fatalf("unexpected status code, %d got %d", http.StatusOK, rr.Code)
-	}
+			rr := httptest.NewRecorder()
 
-	if !strings.Contains(rr.Body.String(), "fragment:result") {
-		t.Fatalf("unexpected response body, %s", rr.Body.String())
+			mux.ServeHTTP(rr, req)
+
+			if test.expectedResponse != rr.Code {
+				t.Fatalf("unexpected status code, %d got %d", http.StatusOK, rr.Code)
+			}
+
+			if !strings.Contains(rr.Body.String(), "fragment:result") {
+				t.Fatalf("unexpected response body, %s", rr.Body.String())
+			}
+		})
 	}
 }
 

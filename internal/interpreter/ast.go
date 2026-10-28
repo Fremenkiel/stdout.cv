@@ -8,11 +8,37 @@ type Node interface {
 	Table()					Node
 	Columns()				[]string
 	String()				string
-	TokenType()			TokenType
+}
+
+type baseToken struct {
+	Token Token
+}
+
+type BaseNode interface {
+	Node
+	returnsValue() 	bool
+	altersSchema()	bool
+	altersRows()	bool
 }
 
 type baseNode struct {
-	Token Token
+	baseToken
+}
+
+func (b *baseNode) returnsValue() bool {
+	return b.tokenType().returnsValue()
+}
+
+func (b *baseNode) altersSchema() bool {
+	return b.tokenType().altersSchema()
+}
+
+func (b *baseNode) altersRows() bool {
+	return b.tokenType().altersRows()
+}
+
+func (b *baseNode) tokenType() TokenType {
+	return b.Token.Type
 }
 
 // INSERT
@@ -24,9 +50,9 @@ type InsertNode struct {
 	values 	Node
 }
 
-var _ Node = (*InsertNode)(nil)
+var _ BaseNode = (*InsertNode)(nil)
 
-func newInsetNode(parser *Parser) (Node, error) {
+func newInsetNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != INSERT {
 		return nil, NewError(
 			INVALID_INSERT_STATEMENT,
@@ -127,14 +153,15 @@ func (i *InsertNode) TokenType() TokenType { return i.Token.Type }
 // SELECT
 type SelectNode struct {
 	baseNode
+
 	columns []Node
 	from    Node
 	where		Node
 }
 
-var _ Node = (*SelectNode)(nil)
+var _ BaseNode = (*SelectNode)(nil)
 
-func newSelectNode(parser *Parser) (Node, error) {
+func newSelectNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != SELECT {
 		return nil, NewError(
 			INVALID_SELECT_STATEMENT,
@@ -276,18 +303,18 @@ func (s *SelectNode) String() string {
 	return buf.String()
 }
 
-func (s *SelectNode) TokenType() TokenType { return s.Token.Type } 
 // UPDATE
 type UpdateNode struct {
 	baseNode
+
 	table				Node
 	set					[]Node
 	where				Node
 }
 
-var _ Node = (*UpdateNode)(nil)
+var _ BaseNode = (*UpdateNode)(nil)
 
-func newUpdateNode(parser *Parser) (Node, error) {
+func newUpdateNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != UPDATE {
 		return nil, NewError(
 			INVALID_UPDATE_STATEMENT,
@@ -428,18 +455,17 @@ func (u *UpdateNode) String() string {
 	return buf.String()
 }
 
-func (u *UpdateNode) TokenType() TokenType { return u.Token.Type } 
-
 // DELETE
 type DeleteNode struct {
 	baseNode
+
 	from    Node
 	where		Node
 }
 
-var _ Node = (*DeleteNode)(nil)
+var _ BaseNode = (*DeleteNode)(nil)
 
-func newDeleteNode(parser *Parser) (Node, error) {
+func newDeleteNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != DELETE {
 		return nil, NewError(
 			INVALID_DELETE_STATEMENT,
@@ -517,17 +543,16 @@ func (d *DeleteNode) String() string {
 	return buf.String()
 }
 
-func (d *DeleteNode) TokenType() TokenType { return d.Token.Type } 
-
 type DropNode struct {
 	baseNode
+
 	modifier	[]Node
 	table			Node
 }
 
-var _ Node = (*DropNode)(nil)
+var _ BaseNode = (*DropNode)(nil)
 
-func newDropNode(parser *Parser) (Node, error) {
+func newDropNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != DROP {
 		return nil, NewError(
 			INVALID_DROP_STATEMENT,
@@ -536,6 +561,9 @@ func newDropNode(parser *Parser) (Node, error) {
 			parser.currentToken().Text,
 			)
 	}
+
+	var node DropNode
+	node.Token = parser.currentToken()
 
 	// consume DROP
 	if err := parser.nextToken(); err != nil {
@@ -555,7 +583,6 @@ func newDropNode(parser *Parser) (Node, error) {
 	if err := parser.nextToken(); err != nil {
 		return nil, err
 	}
-	var node DropNode
 
 	if parser.currentToken().Type == IF {
 		if parser.peakToken().Type != EXISTS {
@@ -613,8 +640,6 @@ func (d *DropNode) String() string {
 	return buf.String()
 }
 
-func (d *DropNode) TokenType() TokenType { return d.Token.Type } 
-
 type CreateNode struct {
 	baseNode
 
@@ -622,9 +647,9 @@ type CreateNode struct {
 	columns	[]Node
 }
 
-var _ Node = (*CreateNode)(nil)
+var _ BaseNode = (*CreateNode)(nil)
 
-func newCreateNode(parser *Parser) (Node, error) {
+func newCreateNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != CREATE {
 		return nil, NewError(
 			INVALID_CREATE_STATEMENT,
@@ -633,6 +658,9 @@ func newCreateNode(parser *Parser) (Node, error) {
 			parser.currentToken().Text,
 			)
 	}
+
+	var node CreateNode
+	node.Token = parser.currentToken()
 
 	// consume CREATE
 	if err := parser.nextToken(); err != nil {
@@ -652,8 +680,6 @@ func newCreateNode(parser *Parser) (Node, error) {
 	if err := parser.nextToken(); err != nil {
 		return nil, err
 	}
-
-	var node CreateNode
 
 	table, err := newFieldNode(parser)
 	if err != nil {
@@ -752,8 +778,6 @@ func (c *CreateNode) String() string {
 	return buf.String()
 }
 
-func (c *CreateNode) TokenType() TokenType { return c.Token.Type } 
-
 type AlterNode struct {
 	baseNode
 
@@ -762,9 +786,9 @@ type AlterNode struct {
 	column		Node
 }
 
-var _ Node = (*AlterNode)(nil)
+var _ BaseNode = (*AlterNode)(nil)
 
-func newAlterNode(parser *Parser) (Node, error) {
+func newAlterNode(parser *Parser) (BaseNode, error) {
 	if parser.currentToken().Type != ALTER {
 		return nil, NewError(
 			INVALID_ALTER_STATEMENT,
@@ -773,6 +797,9 @@ func newAlterNode(parser *Parser) (Node, error) {
 			parser.currentToken().Text,
 			)
 	}
+
+	var node AlterNode
+	node.Token = parser.currentToken()
 
 	// consume CREATE
 	if err := parser.nextToken(); err != nil {
@@ -792,7 +819,6 @@ func newAlterNode(parser *Parser) (Node, error) {
 	if err := parser.nextToken(); err != nil {
 		return nil, err
 	}
-	var node AlterNode
 
 	table, err := newFieldNode(parser)
 	if err != nil {
@@ -865,11 +891,9 @@ func (a *AlterNode) String() string {
 	return buf.String()
 }
 
-func (a *AlterNode) TokenType() TokenType { return a.Token.Type }
-
 // column and table
 type FieldNode struct {
-	baseNode
+	baseToken
 }
 
 var _ Node = (*FieldNode)(nil)
@@ -932,10 +956,8 @@ func (f *FieldNode) String() string {
 	return f.Token.Text
 }
 
-func (f *FieldNode) TokenType() TokenType { return f.Token.Type } 
-
 type ColumnNode struct {
-	baseNode
+	baseToken
 
 	definition	Node
 }
@@ -990,10 +1012,8 @@ func (c *ColumnNode) String() string {
 	return buf.String()
 }
 
-func (c *ColumnNode) TokenType() TokenType { return c.Token.Type }
-
 type ExpressionNode struct {
-	baseNode
+	baseToken
 	precedence	int
 
 	prefix,
@@ -1058,10 +1078,8 @@ func (e *ExpressionNode) String() string {
 	return buf.String()
 }
 
-func (e *ExpressionNode) TokenType() TokenType { return e.Token.Type } 
-
 type OperatorNode struct {
-	infix				[]baseNode
+	infix				[]baseToken
 	prefix,
 	suffix			Node
 	precedence	int
@@ -1104,7 +1122,7 @@ func newOperatorNode(parser *Parser) (Node, error) {
 				)
 		}
 
-		infix := baseNode{
+		infix := baseToken{
 			Token: parser.currentToken(),
 		}
 
@@ -1181,10 +1199,8 @@ func (o *OperatorNode) String() string {
 	return buf.String()
 }
 
-func (o *OperatorNode) TokenType() TokenType { return o.prefix.TokenType() } 
-
 type CastNode struct {
-	baseNode
+	baseToken
 	prefix,
 	suffix		Node
 }
@@ -1251,11 +1267,9 @@ func (c *CastNode) String() string {
 	return buf.String()
 }
 
-func (c *CastNode) TokenType() TokenType { return c.Token.Type } 
-
 // FUNC
 type FuncNode struct {
-	baseNode
+	baseToken
 
 	infix	[]Node
 	suffix Node
@@ -1351,8 +1365,6 @@ func (f *FuncNode) String() string {
 
 	return buf.String()
 }
-
-func (f *FuncNode) TokenType() TokenType { return f.Token.Type } 
 
 // list
 type ListNode struct {
@@ -1462,11 +1474,9 @@ func (l *ListNode) String() string {
 	return buf.String()
 }
 
-func (l *ListNode) TokenType() TokenType { return FIELD } 
-
 // WHERE
 type WhereNode struct {
-	baseNode
+	baseToken
 	prefix			Node
 	expression	Node
 }
@@ -1532,8 +1542,6 @@ func (w *WhereNode) String() string {
 
 	return buf.String()
 }
-
-func (w *WhereNode) TokenType() TokenType { return w.Token.Type } 
 
 func consumeEndChar(parser *Parser) error {
 	if parser.currentToken().Type != SEMICOL {

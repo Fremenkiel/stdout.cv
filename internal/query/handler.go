@@ -7,28 +7,82 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/database"
 	"github.com/fremenkiel/stdout.cv/internal/interpreter"
 	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
+	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
 
-type Renderer interface {
+type renderer interface {
 	RenderPage(w http.ResponseWriter, name string, data any) error
 	RenderFragment(w http.ResponseWriter, name string, data any) error
 }
 
 type service interface {
 	Run(ctx context.Context, sql string) (*Query, error)
+	GetSchema(ctx context.Context) (schema.Schema, error)
+	GetStats(ctx context.Context) (*database.Stats, error)
 }
 
 type Handler struct {
-	renderer	Renderer
+	renderer	renderer
 	service		service
 }
 
-func NewHandler(r Renderer, s service) *Handler {
+func NewHandler(r renderer, s service) *Handler {
 	return &Handler{renderer: r, service: s}
+}
+
+func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	schema, err := h.service.GetSchema(ctx)
+	if err != nil {
+		logger.LogError(
+			"table/handler",
+			"error returned while getting tables",
+			slog.Any("error", err),
+			)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	stats, err := h.service.GetStats(ctx)
+	if err != nil {
+		logger.LogError(
+			"table/handler",
+			"error returned while getting stats",
+			slog.Any("error", err),
+			)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if err := ctx.Err(); err != nil {
+		logger.LogError(
+			"table/handler",
+			"context error",
+			slog.Any("error", err),
+			)
+		w.WriteHeader(http.StatusRequestTimeout)
+		return
+	}
+
+	viewData := h.getViewData(&Query{
+		Schema: schema,
+		Stats: stats,
+		Result: nil,
+	}, nil)
+
+	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
+		logger.LogError(
+			"table/handler",
+			"error returned while rendering",
+			slog.Any("error", err),
+			)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
@@ -109,10 +163,13 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result.Duration = time.Now().UnixMicro() - start.UnixMicro()
-	viewData := h.getResultViewData(result)
+	if result.Result != nil {
+		result.Result.Duration = time.Now().UnixMicro() - start.UnixMicro()
+	}
 
-	if err := h.renderer.RenderFragment(w, "result", viewData); err != nil {
+	viewData := h.getViewData(result, nil)
+
+	if err := h.renderer.RenderFragment(w, "result-swap", viewData); err != nil {
 		logger.LogError(
 			"row/handler",
 			"error returned while rendering",
@@ -122,9 +179,69 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getResultViewData(result *Query) *viewmodels.ResultViewData {
-	viewData := &viewmodels.ResultViewData{
-		Stats: &viewmodels.Stats{
+func (h *Handler) getViewData(result *Query, err *lib.Error) *viewmodels.ViewData {
+	viewData := &viewmodels.ViewData{
+		Tables: h.getTableViewData(result.Schema),
+		Stats: h.getStatsViewData(result.Stats),
+		Error: err,
+		Result: h.getResultViewData(result.Result),
+	}
+
+	return viewData
+}
+
+func (h *Handler) getTableViewData(tables schema.Schema) []*viewmodels.Table {
+	if tables == nil {
+		return nil
+	}
+
+	var viewData = make([]*viewmodels.Table, len(tables))
+
+	for i := range tables {
+		viewData[i] = &viewmodels.Table{
+			Name: tables[i].Name,
+			RowCount: tables[i].RowCount,
+			Columns: h.getColumnViewData(tables[i].Columns),
+		}
+	}
+
+	return viewData
+}
+
+func (h *Handler) getColumnViewData(columns []*schema.Column) *viewmodels.ColumnList {
+	viewData := make(viewmodels.ColumnList, len(columns))
+
+	for i := range columns {
+		viewData[i] = viewmodels.Column{
+			Name: columns[i].Name,
+			Type: columns[i].Type,
+			IsPrimaryKey: columns[i].IsPrimaryKey,
+			IsForeignKey: columns[i].IsForeignKey,
+			IsNullable: columns[i].IsNullable,
+		}
+	}
+
+	return &viewData
+}
+
+func (h *Handler) getStatsViewData(stats *database.Stats) *viewmodels.Stats {
+	if stats == nil {
+		return nil
+	}
+
+	return &viewmodels.Stats{
+		Version: stats.Version,
+		Size: stats.Size,
+	}
+}
+
+func (h *Handler) getResultViewData(result *Result) *viewmodels.Result {
+	if result == nil {
+		return nil
+	}
+
+	viewData := &viewmodels.Result{
+		Stats: &viewmodels.ResultStats{
 			RowCount: uint16(len(result.Rows)),
 			ColumnCount: uint16(len(result.Columns)),
 			Duration: result.Duration,

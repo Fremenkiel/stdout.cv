@@ -18,7 +18,7 @@ func Middleware(s *Service) func(http.Handler) http.Handler {
 			sessionCookie, err := r.Cookie(cookieKey)
 			if err != nil {
 				if errors.Is(err, http.ErrNoCookie) {
-					sessionId, err = s.CreateSession()
+					sessionId, err = s.CreateSession(r.Context())
 					if err != nil {
 						logger.LogError(
 							"session/middlware",
@@ -40,7 +40,7 @@ func Middleware(s *Service) func(http.Handler) http.Handler {
 			} else {
 				sessionId = sessionCookie.Value
 				if len(sessionId) == 0 {
-					sessionId, err = s.CreateSession()
+					sessionId, err = s.CreateSession(r.Context())
 					if err != nil {
 						logger.LogError(
 							"session/middlware",

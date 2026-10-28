@@ -70,6 +70,36 @@ var tablePrefixMap = map[TokenType]struct{}{
 
 type TokenType string
 
+func (t TokenType) returnsValue() bool {
+	return t == SELECT
+}
+
+func (t TokenType) altersSchema() bool {
+	switch t {
+	case CREATE:
+		return true;
+	case ALTER:
+		return true;
+	case DROP:
+		return true;
+	}
+
+	return false
+}
+
+func (t TokenType) altersRows() bool {
+	switch t {
+	case INSERT:
+		return true
+	case UPDATE:
+		return true
+	case DELETE:
+		return true
+	}
+
+	return false
+}
+
 const (
 	EOF					TokenType = "EOF"										// End of file
 	STRING			TokenType = "STRING"								// Strings marked by ''

@@ -2,8 +2,11 @@ package query
 
 import (
 	"context"
+	"log"
 
+	"github.com/fremenkiel/stdout.cv/internal/database"
 	"github.com/fremenkiel/stdout.cv/internal/interpreter"
+	"github.com/fremenkiel/stdout.cv/internal/schema"
 )
 
 type repository interface {
@@ -11,25 +14,36 @@ type repository interface {
 	Execute(ctx context.Context, query string) error
 }
 
-type SchemaService interface {
+type schemaService interface {
+	GetSchema(ctx context.Context) (schema.Schema, error)
 	AppendWildcardSchema(ctx context.Context, tableName string, fields []string) ([]string, error)
 }
 
+type databaseService interface {
+	GetStats(ctx context.Context) (*database.Stats, error)
+}
+
 type Service struct {
-	repository		repository
-	schemaService	SchemaService
+	repo			repository
+	schema		schemaService
+	database	databaseService
 }
 
 var _ service = (*Service)(nil)
 
-func NewService(r repository, ss SchemaService) *Service {
+func NewService(r repository, ss schemaService, ds databaseService) *Service {
 	return &Service{
-		repository: r,
-		schemaService: ss,
+		repo: r,
+		schema: ss,
+		database: ds,
 	}
 }
 
 func (s *Service) Run(ctx context.Context, sql string) (*Query, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	var response Query
 
 	parser := interpreter.NewParser()
@@ -39,33 +53,69 @@ func (s *Service) Run(ctx context.Context, sql string) (*Query, error) {
 
 	executeQueries := parser.GetExecureQueries()
 	for i := range executeQueries {
-		if err := s.repository.Execute(ctx, executeQueries[i].String()); err != nil {
+		if err := s.repo.Execute(ctx, executeQueries[i].String()); err != nil {
 			return nil, err
 		}
 	}
 
 	returnQuery := parser.GetReturnQuery()
-	if returnQuery == nil {
-		return &response, nil
+	if returnQuery != nil {
+		columns, err := s.schema.AppendWildcardSchema(
+			ctx,
+			returnQuery.Table().String(),
+			returnQuery.Columns(),
+			)
+		if err != nil {
+			return nil, err
+		}
+
+		var result Result
+		result.Columns = columns
+
+		rows, err := s.repo.GetRows(ctx, returnQuery.String(), result.Columns)
+		if err != nil {
+			return nil, err
+		}
+
+		result.Rows = rows
+
+		response.Result = &result
 	}
 
-	columns, err := s.schemaService.AppendWildcardSchema(
-		ctx,
-		returnQuery.Table().String(),
-		returnQuery.Columns(),
-		)
-	if err != nil {
-		return nil, err
+	log.Print(parser.AltersDatabase())
+	if parser.AltersDatabase() {
+		schema, err := s.GetSchema(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		response.Schema = schema
+
+		stats, err := s.GetStats(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		response.Stats = stats
 	}
-
-	response.Columns = columns
-
-	rows, err := s.repository.GetRows(ctx, returnQuery.String(), response.Columns)
-	if err != nil {
-		return nil, err
-	}
-
-	response.Rows = rows
 
 	return &response, nil
+}
+
+func (s *Service) GetSchema(ctx context.Context) (schema.Schema, error) {
+	schema, err := s.schema.GetSchema(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return schema, nil
+}
+
+func (s *Service) GetStats(ctx context.Context) (*database.Stats, error) {
+	stats, err := s.database.GetStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }

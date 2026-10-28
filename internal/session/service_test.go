@@ -17,11 +17,12 @@ func TestCreateSession(t *testing.T) {
 	cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
 	service := NewService(cache)
 
-	id, err := service.CreateSession()
+	ctx := t.Context()
+	id, err := service.CreateSession(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := NewContext(t.Context(), id)
+	ctx = NewContext(ctx, id)
 	defer testutil.CleanupSession(ctx, env.DatabasePath)
 
 	if _, ok := cache.sessions.Load(id); !ok {

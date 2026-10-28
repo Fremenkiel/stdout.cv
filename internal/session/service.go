@@ -24,13 +24,17 @@ func NewService(c *Cache) *Service {
 
 // Creates a session id, a database file and saves it to the cache.
 // Uses UpdateSession under the hood
-func (s *Service) CreateSession() (string, error) {
+func (s *Service) CreateSession(ctx context.Context) (string, error) {
 	sessionUuid, err := uuid.NewV7()
 	if err != nil {
 		return "", err
 	}
 
 	id := sessionUuid.String()
+
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
 
 	if err := s.UpdateSession(id); err != nil {
 		return "", err

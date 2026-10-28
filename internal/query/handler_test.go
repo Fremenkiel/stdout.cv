@@ -10,9 +10,76 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/database"
+	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
+
+func TestHandlerIndex(t *testing.T) {
+	tests := []struct{
+		name,
+		method,
+		url											string
+		hasSession							bool
+		expectedResponseContent	[]string
+		expectedResponseCode		int
+	} {
+		{
+			name: "index",
+			method: http.MethodGet,
+			url: "/",
+			hasSession: true,
+			expectedResponseContent: []string {
+				"page:index",
+				"test_table",
+				"876",
+			},
+			expectedResponseCode: http.StatusOK,
+		},
+		{
+			name: "no_session",
+			method: http.MethodGet,
+			url: "/",
+			hasSession: false,
+			expectedResponseContent: nil,
+			expectedResponseCode: http.StatusInternalServerError,
+		},
+	}
+
+	for ti := range tests {
+		test := tests[ti]
+
+		t.Run(test.name, func(t *testing.T) {
+			ctx := t.Context()
+			if test.hasSession {
+				ctx = context.WithValue(ctx, "session_key", "test")
+			}
+
+			handler := NewHandler(
+				testutil.NewRenderer(),
+				&mockService{},
+				)
+
+			rr := httptest.NewRecorder()
+
+			handler.Index(
+				rr,
+				httptest.NewRequestWithContext(ctx, test.method, test.url, nil),
+				)
+
+			if test.expectedResponseCode != rr.Code {
+				t.Fatalf("unexpected status code, %d got %d", test.expectedResponseCode, rr.Code)
+			}
+
+			for _, content := range test.expectedResponseContent {
+				if !strings.Contains(rr.Body.String(), content) {
+					t.Fatalf("unexpected response body, %s got %s", content, rr.Body.String())
+				}
+			}
+		})
+	}
+}
 
 func TestHandlerRun(t *testing.T) {
 	tests := []struct{
@@ -162,14 +229,50 @@ func (m *mockService) Run(ctx context.Context, query string) (*Query, error) {
 	time.Sleep(m.sleep)
 
 	return &Query{
-		Rows: []*Row{
-			{
-				stringPtr("test_row"),
+		Schema: nil,
+		Stats: nil,
+		Result: &Result{
+			Rows: []*Row{
+				{
+					stringPtr("test_row"),
+				},
+			},
+			Columns: []string{
+				"test_col",
+			},
+			Duration: 765,
+		},
+	}, nil
+}
+
+func (m *mockService) GetSchema(ctx context.Context) (schema.Schema, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	return schema.Schema{
+		{
+			Name: "test_table",
+			RowCount: 876,
+			Columns: []*schema.Column{
+				{
+					Name: "test_col",
+					Type: "INTEGER",
+				},
 			},
 		},
-		Columns: []string{
-			"test_col",
-		},
-		Duration: 765,
+	}, nil
+}
+
+func (m *mockService) GetStats(ctx context.Context) (*database.Stats, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	return &database.Stats{
+		Version: "0.1.0",
+		Size: 100,
 	}, nil
 }

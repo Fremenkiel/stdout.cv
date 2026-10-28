@@ -292,6 +292,8 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		return l.newToken(ALTER, keyword), nil
 	case string(COLUMN):
 		return l.newToken(COLUMN, keyword), nil
+	case string(RENAME):
+		return l.newToken(RENAME, keyword), nil
 	case string(ADD):
 		return l.newToken(ADD, keyword), nil
 	case string(PRIMARY):

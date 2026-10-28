@@ -5,24 +5,74 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fremenkiel/stdout.cv/internal/column"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	_ "modernc.org/sqlite"
 )
 
-type SessionCache interface {
+type sessionCache interface {
 	GetFile(id string) (string, error)
 }
 
 type Repository struct {
-	sessionCache	SessionCache
+	cache	sessionCache
 }
 
-func NewRepository(sc SessionCache) *Repository {
-	return &Repository{sessionCache: sc}
+var _ repository = (*Repository)(nil)
+
+func NewRepository(sc sessionCache) *Repository {
+	return &Repository{cache: sc}
 }
 
-func (r *Repository) GetSchema(ctx context.Context, name string) ([]*column.Column, error) {
+func (r *Repository) GetSchema(ctx context.Context) (Schema, error) {
+	query := `
+	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;
+	`
+
+	sessionId, err := session.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	databaseName, err := r.cache.GetFile(sessionId)
+	db, err := sql.Open("sqlite", databaseName)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var schema Schema
+
+	for rows.Next() {
+		var table Table
+
+		if err := rows.Scan(&table.Name); err != nil {
+			return nil, err
+		}
+
+		countQuery := fmt.Sprintf(`
+			SELECT COUNT(*) FROM %s;
+			`, table.Name)
+
+		if err := db.QueryRowContext(ctx, countQuery).Scan(&table.RowCount); err != nil {
+			return nil, err
+		}
+
+		schema = append(schema, &table)
+	}
+
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	return schema, nil
+}
+
+func (r *Repository) GetColumns(ctx context.Context, name string) ([]*Column, error) {
 	fkQuery := fmt.Sprintf(`
 			SELECT "from" FROM pragma_foreign_key_list('%s');
 			`, name)
@@ -35,7 +85,7 @@ func (r *Repository) GetSchema(ctx context.Context, name string) ([]*column.Colu
 		return nil, err
 	}
 
-	databaseName, err := r.sessionCache.GetFile(sessionId)
+	databaseName, err := r.cache.GetFile(sessionId)
 	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?_foreign_keys=on", databaseName))
 	if err != nil {
 		return nil, err
@@ -65,9 +115,9 @@ func (r *Repository) GetSchema(ctx context.Context, name string) ([]*column.Colu
 		fkMap[columnName] = struct{}{}
 	}
 
-	var columns []*column.Column
+	var columns []*Column
 	for rows.Next() {
-		var column column.Column
+		var column Column
 		var defaultValue []byte
 
 		if err := rows.Scan(

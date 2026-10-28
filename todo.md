@@ -2,7 +2,10 @@
 - Fix test
 - Fill out database
 - System query block tests
-- Update sidebar on table change
 - Comment
 - Database test
 - Better error handling on index
+- 500 error indicator
+- make sidebar openstate persistant
+- Fix table rename 
+- Overflow in result table
