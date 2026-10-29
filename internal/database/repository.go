@@ -7,17 +7,17 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/session"
 )
 
-type SessionCache interface {
+type sessionCache interface {
 	GetFile(id string) (string, error)
 }
 
 type Repository struct {
-	sessionCache	SessionCache
+	sessionCache	sessionCache
 }
 
 var _ repository = (*Repository)(nil)
 
-func NewRepository(sc SessionCache) *Repository {
+func NewRepository(sc sessionCache) *Repository {
 	return &Repository{sessionCache: sc}
 }
 

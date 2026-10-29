@@ -10,7 +10,7 @@ import (
 )
 
 type repository interface {
-	GetRows(ctx context.Context, query string, columns []string) ([]*Row, error)
+	GetAll(ctx context.Context, query string, columns []string) ([]*Row, error)
 	Execute(ctx context.Context, query string) error
 }
 
@@ -72,7 +72,7 @@ func (s *Service) Run(ctx context.Context, sql string) (*Query, error) {
 		var result Result
 		result.Columns = columns
 
-		rows, err := s.repo.GetRows(ctx, returnQuery.String(), result.Columns)
+		rows, err := s.repo.GetAll(ctx, returnQuery.String(), result.Columns)
 		if err != nil {
 			return nil, err
 		}

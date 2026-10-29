@@ -92,7 +92,7 @@ type mockRepository struct {}
 
 var _ repository = (*mockRepository)(nil)
 
-func (r *mockRepository) GetRows(ctx context.Context, query string, columns []string) ([]*Row, error) {
+func (r *mockRepository) GetAll(ctx context.Context, query string, columns []string) ([]*Row, error) {
 	return []*Row{
 		{
 			stringPtr("1"),

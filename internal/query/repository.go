@@ -8,21 +8,21 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type SessionCache interface {
+type sessionCache interface {
 	GetFile(id string) (string, error)
 }
 
 type Repository struct {
-	sessionCache SessionCache
+	sessionCache sessionCache
 }
 
 var _ repository = (*Repository)(nil)
 
-func NewRepository(sc SessionCache) *Repository {
+func NewRepository(sc sessionCache) *Repository {
 	return &Repository{sessionCache: sc}
 }
 
-func (r *Repository) GetRows(ctx context.Context, query string, columns []string) ([]*Row, error) {
+func (r *Repository) GetAll(ctx context.Context, query string, columns []string) ([]*Row, error) {
 	sessionId, err := session.FromContext(ctx)
 	if err != nil {
 		return nil, err
