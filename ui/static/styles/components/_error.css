@@ -1,5 +1,6 @@
 .error__container {
-  width: 100%;
+  width: -moz-available;
+  width: -webkit-fill-available;
   margin: var(--size-margin);
   border-radius: var(--size-border-radius);
   border: 1px solid color-mix(in srgb, var(--color-error) 50%, transparent);

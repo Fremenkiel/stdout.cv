@@ -1,6 +1,9 @@
 body {
   --size-nav-width: 25vw;
 
+  --size-query-height: 40vh;
+  --size-result-height: 60vh;
+
   --size-margin-x: 12px;
   --size-margin-y: 20px;
   --size-margin: var(--size-margin-y) var(--size-margin-x);

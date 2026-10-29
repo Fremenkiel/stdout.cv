@@ -1,11 +1,12 @@
 - Simplify tests
-- Fix test
 - Fill out database
-- System query block tests
+- System query block tests (pragma)
 - Comment
-- Database test
+- package Database test
 - Better error handling on index
 - 500 error indicator
 - make sidebar openstate persistant
 - Fix table rename 
-- Overflow in result table
+
+## Query that pass the parser
+SELECT * FROM users:;
