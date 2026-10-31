@@ -15,6 +15,7 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 	"github.com/fremenkiel/stdout.cv/internal/platform/middleware"
 	"github.com/fremenkiel/stdout.cv/internal/query"
+	"github.com/fremenkiel/stdout.cv/internal/registry"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/ui"
@@ -51,11 +52,13 @@ func main() {
 	databaseRepo		:= database.NewRepository(sessionCache)
 	queryRepo 			:= query.NewRepository(sessionCache)
 	schemaRepo			:= schema.NewRepository(sessionCache)
+	registryRepo		:= registry.NewRepository(sessionCache)
 
 	schemaService		:= schema.NewService(schemaRepo)
 	sessionService	:= session.NewService(sessionCache)
 	databaseService	:= database.NewService(databaseRepo, sessionService)
-	rowService			:= query.NewService(queryRepo, schemaService, databaseService)
+	registryService	:= registry.NewService(registryRepo)
+	rowService			:= query.NewService(queryRepo, schemaService, databaseService, registryService)
 
 	renderer := ui.NewRenderer()
 
@@ -130,6 +133,6 @@ func main() {
 	logger.LogInfo(
 		"main",
 		"shutdown complete",
-		slog.Int64("duration_ms", time.Now().Sub(startShutdown).Milliseconds()),
+		slog.Int64("duration_ms", time.Since(startShutdown).Milliseconds()),
 		)
 }

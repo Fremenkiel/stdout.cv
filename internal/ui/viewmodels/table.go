@@ -1,15 +1,14 @@
 package viewmodels
 
-import "github.com/fremenkiel/stdout.cv/internal/platform/lib"
-
 type ViewData struct {
-	Error					*lib.Error
+	Error					*Error
 	Tables				[]*Table
 	Stats					*Stats
 	Result				*Result
 }
 
 type Table struct {
+	Id				int
 	Name 			string
 	RowCount	int16
 	Columns		*ColumnList

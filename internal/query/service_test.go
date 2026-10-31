@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/fremenkiel/stdout.cv/internal/database"
+	"github.com/fremenkiel/stdout.cv/internal/registry"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
@@ -24,8 +25,8 @@ func TestServiceRun(t *testing.T) {
 			expectedResponse: &Result{
 				Rows: []*Row{
 					{
-						stringPtr("1"),
-						stringPtr("Kevin"),
+						new("1"),
+						new("Kevin"),
 					},
 				},	
 				Columns: []string{
@@ -47,7 +48,8 @@ func TestServiceRun(t *testing.T) {
 			service := NewService(
 				&mockRepository{},
 				NewMockSchemaService(),
-				NewMockDataabaseService(),
+				NewMockDatabaseService(),
+				NewMockRegistryService(),
 				)
 
 			response, err := service.Run(ctx, fmt.Sprintf("SELECT * FROM %s;", test.query))
@@ -95,8 +97,8 @@ var _ repository = (*mockRepository)(nil)
 func (r *mockRepository) GetAll(ctx context.Context, query string, columns []string) ([]*Row, error) {
 	return []*Row{
 		{
-			stringPtr("1"),
-			stringPtr("Kevin"),
+			new("1"),
+			new("Kevin"),
 		},
 	}, nil
 }
@@ -151,18 +153,12 @@ func (s *mockSchemaService) AppendWildcardSchema(ctx context.Context, tableName 
 	return s.tableSchema, nil
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
-
-type mockDatabaseService struct {
-}
+type mockDatabaseService struct {}
 
 var _ databaseService = (*mockDatabaseService)(nil)
 
-func NewMockDataabaseService() *mockDatabaseService {
-	return &mockDatabaseService{
-	}
+func NewMockDatabaseService() *mockDatabaseService {
+	return &mockDatabaseService{}
 }
 
 func (m *mockDatabaseService) GetStats(ctx context.Context) (*database.Stats, error) {
@@ -175,4 +171,63 @@ func (m *mockDatabaseService) GetStats(ctx context.Context) (*database.Stats, er
 		Version: "0.1.0",
 		Size: 100,
 	}, nil
+}
+
+type mockRegistryService struct {
+	registry map[string]int
+}
+
+var _ registryService = (*mockRegistryService)(nil)
+
+func NewMockRegistryService() *mockRegistryService {
+	return &mockRegistryService{
+		registry: map[string]int{
+			"users": 1,
+			"educations": 2,
+		},
+	}
+}
+
+func (r *mockRegistryService) GetAll(ctx context.Context) (*registry.Registry, error) {
+	return &registry.Registry{
+		Lookup: r.registry,
+	}, nil
+}
+
+func (r *mockRegistryService) Create(ctx context.Context, name string) (*int, error) {
+	id := len(r.registry)
+
+	r.registry[name] = id
+
+	return &id, nil
+}
+
+func (r *mockRegistryService) Update(ctx context.Context, id int, name string) error {
+	oldName := r.getName(id)
+
+	if len(oldName) == 0 {
+		return registry.ErrInvalidRegistryKey
+	}
+
+	delete(r.registry, oldName)
+	r.registry[name] = id
+
+	return nil
+}
+
+func (r *mockRegistryService) Remove(ctx context.Context, id int) error {
+	name := r.getName(id)
+
+	delete(r.registry, name)
+
+	return nil
+}
+
+func (r *mockRegistryService) getName(id int) string {
+	for name, rId := range r.registry {
+		if rId == id {
+			return name
+		}
+	}
+	return ""
 }

@@ -300,6 +300,8 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		return l.newToken(PRIMARY, keyword), nil
 	case string(KEY):
 		return l.newToken(KEY, keyword), nil
+	case string(TO):
+		return l.newToken(TO, keyword), nil
 	}
 
 	return l.newToken(FIELD, keyword), nil

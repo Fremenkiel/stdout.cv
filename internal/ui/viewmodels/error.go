@@ -1,4 +1,4 @@
-package lib
+package viewmodels
 
 type Error struct {
 	Message					string

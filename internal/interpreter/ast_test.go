@@ -1214,7 +1214,7 @@ func TestNewFieldNode(t *testing.T) {
 	}
 }
 
-func TestNewColumnNode(t *testing.T) {
+func TestNewDefinitionNode(t *testing.T) {
 	tests := []struct{
 		name							string
 		tokens						[]Token
@@ -1249,7 +1249,7 @@ func TestNewColumnNode(t *testing.T) {
 				r: 0,
 			}
 
-			response, err := newColumnNode(parser)
+			response, err := newDefinitionNode(parser)
 
 			typedErr, ok := errors.AsType[*Error](err)
 			if err != nil || test.expectedErrorCode != -1 {
@@ -1637,8 +1637,9 @@ func TestNewCastNode(t *testing.T) {
 				r: 0,
 			}
 
-			fieldNode := FieldNode{}
-			fieldNode.Token = parser.currentToken()
+			fieldNode := FieldNode{
+				token: parser.currentToken(),
+			}
 
 			if err := parser.nextToken(); err != nil {
 				t.Fatalf("unexpected err while creating field, %v", err)

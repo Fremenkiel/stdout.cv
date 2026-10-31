@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"log"
 
 	"github.com/fremenkiel/stdout.cv/internal/session"
 )
@@ -46,7 +45,6 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		return nil, err
 	}
 
-	log.Printf("size: %v", size)
 	if size > 0 {
 		stats.Size = float64(size) / 1000
 	} else {

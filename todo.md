@@ -5,6 +5,7 @@
 - Better error handling on index
 - 500 error indicator
 - make sidebar openstate persistant
+- reset session button
 
 ## Query that pass the parser
 SELECT * FROM users:;

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/database"
+	"github.com/fremenkiel/stdout.cv/internal/registry"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/session"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
@@ -220,6 +221,36 @@ type mockService struct {
 
 var _ service = (*mockService)(nil)
 
+func (m *mockService) GetInfo(ctx context.Context) (*Query, error) {
+	_, ok := ctx.Value("session_key").(string)
+	if !ok {
+		return nil, session.ErrNoSessionInContext
+	}
+
+	time.Sleep(m.sleep)
+
+	schema, err := m.getSchema(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err := m.getStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Query{
+		Schema: schema,
+		Stats: state,
+		Result: nil,
+		Registry: &registry.Registry{
+			Lookup: map[string]int{
+				"test_table": 1,
+			},
+		},
+	}, nil
+}
+
 func (m *mockService) Run(ctx context.Context, query string) (*Query, error) {
 	_, ok := ctx.Value("session_key").(string)
 	if !ok {
@@ -234,7 +265,7 @@ func (m *mockService) Run(ctx context.Context, query string) (*Query, error) {
 		Result: &Result{
 			Rows: []*Row{
 				{
-					stringPtr("test_row"),
+					new("test_row"),
 				},
 			},
 			Columns: []string{
@@ -245,7 +276,7 @@ func (m *mockService) Run(ctx context.Context, query string) (*Query, error) {
 	}, nil
 }
 
-func (m *mockService) GetSchema(ctx context.Context) (schema.Schema, error) {
+func (m *mockService) getSchema(ctx context.Context) (schema.Schema, error) {
 	_, ok := ctx.Value("session_key").(string)
 	if !ok {
 		return nil, session.ErrNoSessionInContext
@@ -265,7 +296,7 @@ func (m *mockService) GetSchema(ctx context.Context) (schema.Schema, error) {
 	}, nil
 }
 
-func (m *mockService) GetStats(ctx context.Context) (*database.Stats, error) {
+func (m *mockService) getStats(ctx context.Context) (*database.Stats, error) {
 	_, ok := ctx.Value("session_key").(string)
 	if !ok {
 		return nil, session.ErrNoSessionInContext

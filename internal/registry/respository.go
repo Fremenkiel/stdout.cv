@@ -16,13 +16,15 @@ type Repository struct {
 	cache sessionCache
 }
 
+var _ repository = (*Repository)(nil)
+
 func NewRepository(c sessionCache) *Repository {
 	return &Repository{
 		cache: c,
 	}
 }
 
-func (r *Repository) GetAll(ctx context.Context, id int, name string) (Registry, error) {
+func (r *Repository) GetAll(ctx context.Context) (*Registry, error) {
 	sessionId, err := session.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -36,7 +38,9 @@ func (r *Repository) GetAll(ctx context.Context, id int, name string) (Registry,
 
 	sql := "SELECT id, current_name FROM table_registry"
 
-	var registry Registry
+	var registry = Registry{
+		Lookup: make(map[string]int),
+	}
 	rows, err := db.QueryContext(ctx, sql)
 	if err != nil {
 		return nil, err
@@ -44,17 +48,22 @@ func (r *Repository) GetAll(ctx context.Context, id int, name string) (Registry,
 	defer rows.Close()
 
 	for rows.Next() {
-		var table Table
-		rows.Scan(&table.Id, &table.CurrentName)
+		var id int
+		var name string
+		rows.Scan(&id, &name)
 
-		registry = append(registry, &table)
+		registry.Lookup[name] = id
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	if err := db.Close(); err != nil {
 		return nil, err
 	}
 
-	return registry, nil
+	return &registry, nil
 }
 
 func (r *Repository) Create(ctx context.Context, name string) (*int, error) {

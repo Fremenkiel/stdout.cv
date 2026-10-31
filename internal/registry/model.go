@@ -1,8 +1,17 @@
 package registry
 
-type Registry = []*Table
+type Registry struct { 
+	Lookup map[string]int
+}
 
-type Table struct {
-	Id					int
-	CurrentName	string
+func (r *Registry) UpdateName(oldName, newName string) error {
+	id, ok := r.Lookup[oldName]
+	if !ok {
+		return ErrInvalidRegistryKey
+	}
+	delete(r.Lookup, oldName)
+
+	r.Lookup[newName] = id
+
+	return nil
 }

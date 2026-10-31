@@ -25,7 +25,7 @@ func NewRepository(sc sessionCache) *Repository {
 
 func (r *Repository) GetSchema(ctx context.Context) (Schema, error) {
 	query := `
-	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;
+	SELECT name FROM pragma_table_list WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'table_registry' ORDER BY name;
 	`
 
 	sessionId, err := session.FromContext(ctx)
@@ -65,6 +65,10 @@ func (r *Repository) GetSchema(ctx context.Context) (Schema, error) {
 		schema = append(schema, &table)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	if err := db.Close(); err != nil {
 		return nil, err
 	}
@@ -97,12 +101,6 @@ func (r *Repository) GetColumns(ctx context.Context, name string) ([]*Column, er
 	}
 	defer fkRows.Close()
 
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	fkMap := make(map[string]struct{})
 	for fkRows.Next() {
 		var columnName string
@@ -114,6 +112,16 @@ func (r *Repository) GetColumns(ctx context.Context, name string) ([]*Column, er
 
 		fkMap[columnName] = struct{}{}
 	}
+
+	if err := fkRows.Err(); err != nil {
+		return nil, err
+	}
+
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
 	var columns []*Column
 	for rows.Next() {
@@ -135,6 +143,10 @@ func (r *Repository) GetColumns(ctx context.Context, name string) ([]*Column, er
 		column.IsForeignKey = ok
 
 		columns = append(columns, &column)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	if err := db.Close(); err != nil {

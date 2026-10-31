@@ -44,7 +44,7 @@ func (r *Repository) GetAll(ctx context.Context, query string, columns []string)
 
 	for rows.Next() {
 		rawBuffer := make([]sql.RawBytes, len(columns))
-		callArgs := make([]interface{}, len(rawBuffer))
+		callArgs := make([]any, len(rawBuffer))
 
 		for i := range rawBuffer {
 			callArgs[i] = &rawBuffer[i]
@@ -61,6 +61,10 @@ func (r *Repository) GetAll(ctx context.Context, query string, columns []string)
 		}
 
 		list = append(list, &row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	if err := db.Close(); err != nil {

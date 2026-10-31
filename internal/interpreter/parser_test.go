@@ -377,7 +377,7 @@ func TestParseSql(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			err := parser.ParseSql(test.sql); 
+			_, err := parser.ParseSql(test.sql); 
 
 			typedErr, ok := errors.AsType[*Error](err)
 			if err != nil || test.expectedErrorCode != -1 {
@@ -441,7 +441,7 @@ func TestParseQueryTokenStats(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != nil {
+			if _, err := parser.ParseSql(test.sql); err != nil {
 				t.Fatal(err)
 			}
 
@@ -530,15 +530,16 @@ func TestParseQueryTable(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != nil {
+			trees, err := parser.ParseSql(test.sql)
+			if err != nil {
 				t.Fatalf("unexpected error while parsing, %v", err)
 			}
 
-			if treeLen := len(parser.trees); treeLen != 1 {
+			if treeLen := len(trees); treeLen != 1 {
 				t.Fatalf("unexpected tree len, 1 got %v", treeLen)
 			}
 
-			response := parser.trees[0].Table()
+			response := trees[0].Table()
 			if test.expectedResponse != response.String() {
 				t.Fatalf("unexpected response, '%s' got '%s'", test.expectedResponse, response.String())
 			}
@@ -609,15 +610,16 @@ func TestParseQueryColumns(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != nil {
+			trees, err := parser.ParseSql(test.sql)
+			if err != nil {
 				t.Fatalf("unexpected error while parsing, %v", err)
 			}
 
-			if treeLen := len(parser.trees); treeLen != 1 {
-				t.Fatalf("unexpected tree len, 1 got %v (%v)", treeLen, parser.trees)
+			if treeLen := len(trees); treeLen != 1 {
+				t.Fatalf("unexpected tree len, 1 got %v (%v)", treeLen, trees)
 			}
 
-			response := parser.trees[0].Columns()
+			response := trees[0].Columns()
 			for i := range response {
 				if test.expectedResponse[i] != response[i] {
 					t.Fatalf("unexpected response, '%s' got '%s'", test.expectedResponse[i], response[i])
@@ -673,15 +675,16 @@ func TestParseQueryToString(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parser := NewParser()
 
-			if err := parser.ParseSql(test.sql); err != nil {
+			trees, err := parser.ParseSql(test.sql)
+			if err != nil {
 				t.Fatalf("unexpected error while parsing, %v", err)
 			}
 
-			if treeLen := len(parser.trees); treeLen != 1 {
+			if treeLen := len(trees); treeLen != 1 {
 				t.Fatalf("unexpected tree len, 1 got %v", treeLen)
 			}
 
-			response := parser.trees[0].String()
+			response := trees[0].String()
 			if test.sql != response {
 				t.Fatalf("unexpected response, '%s' got '%s'", test.sql, response)
 			}
@@ -768,190 +771,6 @@ func TestExpressionParse(t *testing.T) {
 			response := node.String()
 			if test.expectedResponse != response {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, response)
-			}
-		})
-	}
-}
-
-func TestGetExecuteQueries(t *testing.T) {
-	tests := []struct{
-		name							string
-		nodes							[]BaseNode
-		expectedResponse  []BaseNode
-	} {
-		{
-			name: "no_execute",
-			nodes: []BaseNode{
-				&SelectNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-						Token: Token{
-							Type: SELECT,
-						},
-						},
-					},
-				},
-			},
-			expectedResponse: nil,
-		},
-		{
-			name: "only_execute",
-			nodes: []BaseNode{
-				&UpdateNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-						Token: Token{
-							Type: UPDATE,
-						},
-						},
-					},
-				},
-			},
-			expectedResponse: []BaseNode{
-				&UpdateNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-						Token: Token{
-							Type: UPDATE,
-						},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "update_and_select",
-			nodes: []BaseNode{
-				&UpdateNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-						Token: Token{
-							Type: UPDATE,
-						},
-						},
-					},
-				},
-				&SelectNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-						Token: Token{
-							Type: SELECT,
-						},
-						},
-					},
-				},
-			},
-			expectedResponse: []BaseNode{
-				&UpdateNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-						Token: Token{
-							Type: UPDATE,
-						},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			parser := &Parser{
-				trees: test.nodes,
-			}
-
-			response := parser.GetExecureQueries()
-
-			if len(test.expectedResponse) != len(response) {
-				t.Fatalf("unexpected response len, %v got %v", len(test.expectedResponse), len(response))
-			}
-
-			for i := range response {
-				if test.expectedResponse[i].String() != response[i].String() {
-					t.Fatalf("unexpected response entry (%v), %s got %s", i, test.expectedResponse[i].String(), response[i].String())
-				}
-			}
-		})
-	}
-}
-
-func TestGetReturnQuery(t *testing.T) {
-	tests := []struct{
-		name							string
-		nodes							[]BaseNode
-		expectedResponse  Node
-	} {
-		{
-			name: "no_return",
-			nodes: []BaseNode{
-				&UpdateNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-							Token: Token{
-								Type: UPDATE,
-							},
-						},
-					},
-				},
-			},
-			expectedResponse: nil,
-		},
-		{
-			name: "only_return",
-			nodes: []BaseNode{
-				&SelectNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-							Token: Token{
-								Type: SELECT,
-							},
-						},
-					},
-				},
-			},
-			expectedResponse: &SelectNode{},
-		},
-		{
-			name: "update_and_select",
-			nodes: []BaseNode{
-				&UpdateNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-							Token: Token{
-								Type: UPDATE,
-							},
-						},
-					},
-				},
-				&SelectNode{
-					baseNode: baseNode{
-						baseToken: baseToken{
-							Token: Token{
-								Type: SELECT,
-							},
-						},
-					},
-				},
-			},
-			expectedResponse: &SelectNode{},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			parser := &Parser{
-				trees: test.nodes,
-			}
-
-			response := parser.GetReturnQuery()
-
-			if test.expectedResponse == nil && response == nil {
-				return
-			}
-
-			if test.expectedResponse.String() != response.String() {
-				t.Fatalf("unexpected response, %s got %s", test.expectedResponse.String(), response.String())
 			}
 		})
 	}

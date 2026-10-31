@@ -3,7 +3,6 @@ package interpreter
 type Parser struct {
 	lexer 		*Lexer
 	handlers	map[TokenType]func(*Parser) (BaseNode, error)
-	trees   	[]BaseNode
 
 	r					int
 	tokens		[]Token
@@ -26,15 +25,15 @@ func NewParser() *Parser {
 	return parser
 }
 
-func (p *Parser) ParseSql(sql string) error {
-	p.trees = make([]BaseNode, 0, 3)
+func (p *Parser) ParseSql(sql string) ([]BaseNode, error) {
+	trees := make([]BaseNode, 0, 3)
 	p.lexer.Write(sql)
 	p.r = 0
 
 	for {
 		t, err := p.lexer.Next()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		p.tokens = append(p.tokens, t)
@@ -51,7 +50,7 @@ func (p *Parser) ParseSql(sql string) error {
 
 		handler, ok := p.handlers[p.currentToken().Type]
 		if !ok {
-			return NewError(
+			return nil, NewError(
 				UNSUPPORTED_QUERY,
 				p.currentToken().LineNumber,
 				p.currentToken().End,
@@ -61,52 +60,13 @@ func (p *Parser) ParseSql(sql string) error {
 
 		node, err := handler(p)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		p.trees = append(p.trees, node)
+		trees = append(trees, node)
 	}
 
-	return nil
-}
-
-func (p *Parser) GetExecureQueries() []BaseNode {
-	var mod int = 0
-	if rq := p.GetReturnQuery(); rq != nil {
-		mod = 1
-	}
-
-	if (len(p.trees) - mod) < 0 {
-		return nil
-	}
-
-	return p.trees[0:len(p.trees) - mod]
-}
-
-func (p *Parser) GetReturnQuery() BaseNode {
-	if len(p.trees) == 0 {
-		return nil
-	}
-
-	if rq := p.trees[len(p.trees) - 1]; rq.returnsValue() {
-		return rq
-	}
-
-	return nil
-}
-
-func (p *Parser) AltersDatabase() bool {
-	if len(p.trees) == 0 {
-		return false
-	}
-
-	for i := range p.trees {
-		if p.trees[i].altersSchema() || p.trees[i].altersRows() {
-			return true
-		}
-	}
-
-	return false
+	return trees, nil
 }
 
 func (p *Parser) expressionParse(basePrecedence int) (Node, error) {
@@ -145,8 +105,8 @@ func (p *Parser) expressionParse(basePrecedence int) (Node, error) {
 			precedence: operatorPrecedence,
 			prefix: left,
 			suffix: right,
+			token: operator,
 		}
-		node.Token = operator
 
 		left = &node
 	}

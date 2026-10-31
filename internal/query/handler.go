@@ -2,15 +2,14 @@ package query
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/database"
-	"github.com/fremenkiel/stdout.cv/internal/interpreter"
 	"github.com/fremenkiel/stdout.cv/internal/platform/lib"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
+	"github.com/fremenkiel/stdout.cv/internal/registry"
 	"github.com/fremenkiel/stdout.cv/internal/schema"
 	"github.com/fremenkiel/stdout.cv/internal/ui/viewmodels"
 )
@@ -21,9 +20,8 @@ type renderer interface {
 }
 
 type service interface {
+	GetInfo(ctx context.Context) (*Query, error)
 	Run(ctx context.Context, sql string) (*Query, error)
-	GetSchema(ctx context.Context) (schema.Schema, error)
-	GetStats(ctx context.Context) (*database.Stats, error)
 }
 
 type Handler struct {
@@ -37,22 +35,11 @@ func NewHandler(r renderer, s service) *Handler {
 
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	schema, err := h.service.GetSchema(ctx)
+	query, err := h.service.GetInfo(ctx)
 	if err != nil {
 		logger.LogError(
 			"table/handler",
-			"error returned while getting tables",
-			slog.Any("error", err),
-			)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	stats, err := h.service.GetStats(ctx)
-	if err != nil {
-		logger.LogError(
-			"table/handler",
-			"error returned while getting stats",
+			"error returned while getting db info",
 			slog.Any("error", err),
 			)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -69,11 +56,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewData := h.getViewData(&Query{
-		Schema: schema,
-		Stats: stats,
-		Result: nil,
-	}, nil)
+	viewData := h.getViewData(query, nil)
 
 	if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
 		logger.LogError(
@@ -98,58 +81,7 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.service.Run(ctx, sql)
 	if err != nil {
-		if typedErr, ok := errors.AsType[*interpreter.Error](err); ok {
-			ln, csn, cen := typedErr.Pos()
-			libErr := &lib.Error{
-				Message: typedErr.Error(),
-				Code: interpreter.ErrorCodeString[typedErr.Code()],
-				Duration: time.Now().UnixMicro() - start.UnixMicro(),
-				LineNumber: ln,
-				CharStartNumber: csn,
-				CharEndNumber: cen,
-			}
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
-				logger.LogError(
-					"row/handler",
-					"error returned while rendering error container",
-					slog.Any("error", err),
-					)
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-			return
-		}
-		if libErr, ok := lib.ParseSqliteError(err); ok {
-			libErr.Duration = time.Now().UnixMicro() - start.UnixMicro()
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
-				logger.LogError(
-					"row/handler",
-					"error returned while rendering error container",
-					slog.Any("error", err),
-					)
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-			return
-		}
-		logger.LogError(
-			"row/handler",
-			"error returned while getting rows",
-			slog.Any("error", err),
-			)
-		libErr := &lib.Error{
-			Message: err.Error(),
-			Code: "INTERNAL_SERVER_ERROR",
-			Duration: time.Now().UnixMicro() - start.UnixMicro(),
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		if err = h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
-			logger.LogError(
-				"row/handler",
-				"error returned while rendering error container",
-				slog.Any("error", err),
-				)
-		}
+		h.writeError(w, err, start)
 		return
 	}
 
@@ -179,9 +111,46 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getViewData(result *Query, err *lib.Error) *viewmodels.ViewData {
+func (h *Handler) writeError(w http.ResponseWriter, err error, start time.Time) {
+	var libErr *viewmodels.Error
+
+	if parsedErr, ok := lib.ParseInterpreterError(err, start); ok {
+		libErr = parsedErr
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	} else if parsedErr, ok := lib.ParseSqliteError(err, start); ok {
+		libErr = parsedErr
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	} else if parsedErr, ok := lib.ParseLibError(err, start); ok {
+		libErr = parsedErr
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	}
+
+	if libErr == nil {
+		logger.LogError(
+			"row/handler",
+			"error returned while getting rows",
+			slog.Any("error", err),
+			)
+		libErr = &viewmodels.Error{
+			Message: err.Error(),
+			Code: "INTERNAL_SERVER_ERROR",
+			Duration: time.Since(start).Microseconds(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	if err := h.renderer.RenderFragment(w, "error-result-swap", libErr); err != nil {
+		logger.LogError(
+			"row/handler",
+			"error returned while rendering error container",
+			slog.Any("error", err),
+			)
+	}
+}
+
+func (h *Handler) getViewData(result *Query, err *viewmodels.Error) *viewmodels.ViewData {
 	viewData := &viewmodels.ViewData{
-		Tables: h.getTableViewData(result.Schema),
+		Tables: h.getTableViewData(result.Schema, result.Registry),
 		Stats: h.getStatsViewData(result.Stats),
 		Error: err,
 		Result: h.getResultViewData(result.Result),
@@ -190,15 +159,22 @@ func (h *Handler) getViewData(result *Query, err *lib.Error) *viewmodels.ViewDat
 	return viewData
 }
 
-func (h *Handler) getTableViewData(tables schema.Schema) []*viewmodels.Table {
+func (h *Handler) getTableViewData(tables schema.Schema, registry *registry.Registry) []*viewmodels.Table {
 	if tables == nil {
 		return nil
 	}
 
 	var viewData = make([]*viewmodels.Table, len(tables))
 
+
 	for i := range tables {
+		id, ok := registry.Lookup[tables[i].Name]
+		if !ok {
+			continue
+		}
+
 		viewData[i] = &viewmodels.Table{
+			Id: id,
 			Name: tables[i].Name,
 			RowCount: tables[i].RowCount,
 			Columns: h.getColumnViewData(tables[i].Columns),
