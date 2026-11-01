@@ -15,7 +15,7 @@ func LogRequestHandler(h http.Handler) http.Handler {
 		metricsResponseWriter := metrics.NewResponseWriter(w)
 		h.ServeHTTP(metricsResponseWriter, r)
 
-		duration := time.Now().Sub(start)
+		duration := time.Since(start)
 		uri := r.URL.String()
 		method := r.Method
 		code := metricsResponseWriter.Code

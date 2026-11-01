@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
-	"github.com/google/uuid"
+	"uuid"
 )
 
 func TestCreateSession(t *testing.T) {
-	env := testutil.LoadTestEnv(t)
-	cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+	cache := testutil.NewMockSessionCache(t)
 	service := NewService(cache)
 
 	ctx := t.Context()
@@ -23,13 +22,13 @@ func TestCreateSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx = NewContext(ctx, id)
-	defer testutil.CleanupSession(ctx, env.DatabasePath)
+	defer service.removeSessionDatabase(id)
 
-	if _, ok := cache.sessions.Load(id); !ok {
+	if _, ok := cache.Sessions.Load(id); !ok {
 		t.Fatal("session not saved in cache")
 	}
 
-	if _, ok := cache.files.Load(id); !ok {
+	if _, ok := cache.Files.Load(id); !ok {
 		t.Fatal("session database file path not saved in cache")
 	}
 }
@@ -53,33 +52,27 @@ func TestServiceUpdateSession(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+			cache := testutil.NewMockSessionCache(t)
 			service := NewService(cache)
 
-			sessionUuid, err := uuid.NewV7()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			sessionUuid := uuid.NewV7()
 			id := sessionUuid.String()
 
 			if test.loaded {
-				cache.sessions.Store(id, nil)
-				cache.files.Store(id, "placeholder_value")
+				cache.Sessions.Store(id, nil)
+				cache.Files.Store(id, "placeholder_value")
 			}
 
 			if err := service.UpdateSession(id); err != nil {
 				t.Fatal(err)
 			}
-			ctx := NewContext(t.Context(), id)
-			defer testutil.CleanupSession(ctx, env.DatabasePath)
+			defer service.removeSessionDatabase(id)
 
-			if _, ok := cache.sessions.Load(id); !ok {
+			if _, ok := cache.Sessions.Load(id); !ok {
 				t.Fatal("session not saved in cache")
 			}
 
-			if _, ok := cache.files.Load(id); !ok {
+			if _, ok := cache.Files.Load(id); !ok {
 				t.Fatal("session database file path not saved in cache")
 			}
 		})
@@ -234,11 +227,7 @@ func TestRemoveExpiredSessions(t *testing.T) {
 				}
 			}
 
-			sessionUuid, err := uuid.NewV7()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			sessionUuid := uuid.NewV7()
 			id := sessionUuid.String()
 			fileName := fmt.Sprintf(env.DatabaseFileTemplate, id)
 
@@ -284,27 +273,21 @@ func TestRemoveExpiredSessions(t *testing.T) {
 }
 
 func TestCreateSessionDatabase(t *testing.T) {
-	env := testutil.LoadTestEnv(t)
-	cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+	cache := testutil.NewMockSessionCache(t)
 	service := NewService(cache)
 
 	if err := ensureFolder(); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	id := uuid.NewV7()
 	if err := service.createSessionDatabase(id.String()); err != nil {
 		t.Fatal(err)
 	}
-	ctx := NewContext(t.Context(), id.String())
-	defer testutil.CleanupSession(ctx, env.DatabasePath)
+	defer service.removeSessionDatabase(id.String())
 
 	count := 0
-	cache.files.Range(func(key, value any) bool {
+	cache.Files.Range(func(key, value any) bool {
 		if count > 1 {
 			t.Fatal("unexpected file len, exceded 1")
 		}
@@ -327,11 +310,7 @@ func TestRemoveSessionDatabase(t *testing.T) {
 	cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
 	service := NewService(cache)
 
-	id, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	id := uuid.NewV7()
 	databaseName := cache.AddFile(id.String())
 
 	if err := createTestFile(databaseName); err != nil {

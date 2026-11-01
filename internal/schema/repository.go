@@ -34,6 +34,10 @@ func (r *Repository) GetSchema(ctx context.Context) (Schema, error) {
 	}
 
 	databaseName, err := r.cache.GetFile(sessionId)
+	if err != nil {
+		return nil, err
+	}
+
 	db, err := sql.Open("sqlite", databaseName)
 	if err != nil {
 		return nil, err

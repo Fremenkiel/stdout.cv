@@ -42,9 +42,23 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 			"error returned while getting db info",
 			slog.Any("error", err),
 			)
+
+		viewData := h.getViewData(nil, &viewmodels.Error{
+			Message: "An error returned while getting db info",
+			Code: "INTERNAL_SERVER_ERROR",
+			Helpertext: "Try to clear the session cookie and refresh the page",
+		})
 		w.WriteHeader(http.StatusInternalServerError)
+
+		if err := h.renderer.RenderPage(w, "index", viewData); err != nil {
+			logger.LogError(
+				"table/handler",
+				"error returned while rendering",
+				slog.Any("error", err),
+				)
+		}
 		return
-	}
+	} 
 
 	if err := ctx.Err(); err != nil {
 		logger.LogError(
@@ -135,6 +149,7 @@ func (h *Handler) writeError(w http.ResponseWriter, err error, start time.Time) 
 			Message: err.Error(),
 			Code: "INTERNAL_SERVER_ERROR",
 			Duration: time.Since(start).Microseconds(),
+			Helpertext: "Try to clear the session cookie and refresh the page",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 	}
@@ -149,14 +164,19 @@ func (h *Handler) writeError(w http.ResponseWriter, err error, start time.Time) 
 }
 
 func (h *Handler) getViewData(result *Query, err *viewmodels.Error) *viewmodels.ViewData {
-	viewData := &viewmodels.ViewData{
-		Tables: h.getTableViewData(result.Schema, result.Registry),
-		Stats: h.getStatsViewData(result.Stats),
+	viewData := viewmodels.ViewData{
 		Error: err,
-		Result: h.getResultViewData(result.Result),
 	}
 
-	return viewData
+	if result == nil {
+		return &viewData
+	}
+
+	viewData.Tables = h.getTableViewData(result.Schema, result.Registry)
+	viewData.Stats = h.getStatsViewData(result.Stats)
+	viewData.Result = h.getResultViewData(result.Result)
+
+	return &viewData
 }
 
 func (h *Handler) getTableViewData(tables schema.Schema, registry *registry.Registry) []*viewmodels.Table {
@@ -165,7 +185,6 @@ func (h *Handler) getTableViewData(tables schema.Schema, registry *registry.Regi
 	}
 
 	var viewData = make([]*viewmodels.Table, len(tables))
-
 
 	for i := range tables {
 		id, ok := registry.Lookup[tables[i].Name]

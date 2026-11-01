@@ -31,6 +31,10 @@
   color: var(--color-text-error);
 }
 
+.error__message {
+  margin: var(--size-margin)
+}
+
 .error__description,
 .error__helpertext {
   font-size: 14px;

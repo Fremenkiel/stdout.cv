@@ -1,21 +1,26 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/fremenkiel/stdout.cv/internal/platform/consts"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
 )
 
-const cookieKey key = "session_id"
+type service interface {
+	CreateSession(ctx context.Context) (string, error)
+	UpdateSession(id string) error
+}
 
-func Middleware(s *Service) func(http.Handler) http.Handler {
+func Middleware(s service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var sessionId string
-			sessionCookie, err := r.Cookie(cookieKey)
+			sessionCookie, err := r.Cookie(consts.CookieKey)
 			if err != nil {
 				if errors.Is(err, http.ErrNoCookie) {
 					sessionId, err = s.CreateSession(r.Context())
@@ -74,7 +79,7 @@ func Middleware(s *Service) func(http.Handler) http.Handler {
 
 func setCookie(w http.ResponseWriter, id string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     cookieKey,
+		Name:     consts.CookieKey,
 		Value:    id,
 		Path:     "/",
 		MaxAge:   int(5*time.Minute),

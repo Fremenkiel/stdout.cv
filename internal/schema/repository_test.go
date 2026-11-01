@@ -7,7 +7,7 @@ import (
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
 )
 
-func TestRepositoryGetTables(t *testing.T) {
+func TestRepositoryGetSchema(t *testing.T) {
 	tests := []struct{
 		name							string
 		hasSession				bool
@@ -85,22 +85,20 @@ func TestRepositoryGetTables(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+			sessionService := testutil.NewMockSessionService(t)
 
 			ctx := t.Context()
+			defer sessionService.CleanupSession(ctx)
 			if test.hasSession {
-				sessionService := session.NewService(cache)
-				id, err := sessionService.CreateSession(ctx)
+				sessionCtx, err := sessionService.CreateSessionContext(ctx)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				ctx = session.NewContext(ctx, id)
-				defer testutil.CleanupSession(ctx, env.DatabasePath)
+				ctx = sessionCtx
 			}
 
-			repository := NewRepository(cache)
+			repository := NewRepository(sessionService.Cache)
 
 			response, err := repository.GetSchema(ctx)
 			if test.expectedError != err {
@@ -114,7 +112,6 @@ func TestRepositoryGetTables(t *testing.T) {
 			if len(test.expectedResponse) != len(response) {
 				t.Fatalf("unexpected response len, %d got %d", len(test.expectedResponse), len(response))
 			}
-
 
 			for i := range response {
 				table := response[i]
@@ -162,7 +159,7 @@ func TestRepositoryGetTables(t *testing.T) {
 	}
 }
 
-func TestRepositoryGetSchema(t *testing.T) {
+func TestRepositoryGetColumns(t *testing.T) {
 	tests := []struct{
 		name,
 		tableName					string
@@ -214,22 +211,20 @@ func TestRepositoryGetSchema(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+			sessionService := testutil.NewMockSessionService(t)
 
 			ctx := t.Context()
+			defer sessionService.CleanupSession(ctx)
 			if test.hasSession {
-				sessionService := session.NewService(cache)
-				id, err := sessionService.CreateSession(ctx)
+				sessionCtx, err := sessionService.CreateSessionContext(ctx)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				ctx = session.NewContext(ctx, id)
-				defer testutil.CleanupSession(ctx, env.DatabasePath)
+				ctx = sessionCtx
 			}
 
-			repository := NewRepository(cache)
+			repository := NewRepository(sessionService.Cache)
 
 			response, err := repository.GetColumns(ctx, test.tableName)
 			if test.expectedError != err {

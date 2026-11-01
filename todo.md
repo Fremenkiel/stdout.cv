@@ -1,11 +1,8 @@
 - Simplify tests
 - Fill out database
 - Comment
-- package Database test
-- Better error handling on index
-- 500 error indicator
-- make sidebar openstate persistant
-- reset session button
+- Repo test
+- Registry tests
 
 ## Query that pass the parser
 SELECT * FROM users:;

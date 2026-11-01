@@ -11,25 +11,37 @@ import (
 
 	"github.com/fremenkiel/stdout.cv/db"
 	"github.com/fremenkiel/stdout.cv/internal/platform/logger"
-	"github.com/google/uuid"
+	"uuid"
 )
 
-type Service struct {
-	cache	*Cache
+type cache interface {
+	DatabasePath() string
+	DatabaseFileTemplate() string
+
+	LoadSession(id string) (time.Time, bool)
+	AddSession(id string)
+	UpdateSession(id string) bool
+
+	LoadAndDeleteOldSessions() []string	
+	LoadAndDeleteOrphantFiles() []string
+
+	GetFile(id string) (string, error)
+	AddFile(id string) string
+	RemoveFile(id string)
 }
 
-func NewService(c *Cache) *Service {
+type Service struct {
+	cache	cache
+}
+
+func NewService(c cache) *Service {
 	return &Service{cache: c}
 }
 
 // Creates a session id, a database file and saves it to the cache.
 // Uses UpdateSession under the hood
 func (s *Service) CreateSession(ctx context.Context) (string, error) {
-	sessionUuid, err := uuid.NewV7()
-	if err != nil {
-		return "", err
-	}
-
+	sessionUuid := uuid.NewV7()
 	id := sessionUuid.String()
 
 	if ctx.Err() != nil {
@@ -95,7 +107,7 @@ func (s *Service) RemoveExpiredSessions() error {
 		}
 	}
 
-	dir, err := os.ReadDir(s.cache.databasePath)
+	dir, err := os.ReadDir(s.cache.DatabasePath())
 	if err != nil {
 		return err
 	}
@@ -160,7 +172,7 @@ func (s *Service) createSessionDatabase(id string) error {
 }
 
 func (s *Service) removeSessionDatabase(id string) error {
-	if err := os.Remove(fmt.Sprintf(s.cache.databaseFileTemplate, id)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(fmt.Sprintf(s.cache.DatabaseFileTemplate(), id)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	s.cache.RemoveFile(id)

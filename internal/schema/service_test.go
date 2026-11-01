@@ -85,25 +85,21 @@ func TestServiceGetSchema(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+			sessionService := testutil.NewMockSessionService(t)
 
 			ctx := t.Context()
-
+			defer sessionService.CleanupSession(ctx)
 			if test.hasSession {
-				sessionService := session.NewService(cache)
-
-				sessionId, err := sessionService.CreateSession(ctx)
+				sessionCtx, err := sessionService.CreateSessionContext(ctx)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				ctx = session.NewContext(t.Context(), sessionId)
-				defer testutil.CleanupSession(ctx, env.DatabasePath)
+				ctx = sessionCtx
 			}
 
 			service := NewService(
-				NewRepository(cache),
+				NewRepository(sessionService.Cache),
 				)
 
 			response, err := service.GetSchema(ctx)
@@ -215,23 +211,21 @@ func TestServiceGetColumns(t *testing.T) {
 		test := tests[ti]
 
 		t.Run(test.name, func(t *testing.T) {
-			env := testutil.LoadTestEnv(t)
-			cache := session.NewCache(env.DatabasePath, env.DatabaseFileTemplate)
+			sessionService := testutil.NewMockSessionService(t)
 
 			ctx := t.Context()
+			defer sessionService.CleanupSession(ctx)
 			if test.hasSession {
-				sessionService := session.NewService(cache)
-				id, err := sessionService.CreateSession(ctx)
+				sessionCtx, err := sessionService.CreateSessionContext(ctx)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				ctx = session.NewContext(ctx, id)
-				defer testutil.CleanupSession(ctx, env.DatabasePath)
+				ctx = sessionCtx
 			}
 
 			service := NewService(
-				NewRepository(cache),
+				NewRepository(sessionService.Cache),
 				)
 
 			response, err := service.GetColumns(ctx, test.tableName)

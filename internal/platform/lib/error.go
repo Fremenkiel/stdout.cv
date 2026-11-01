@@ -36,6 +36,8 @@ var (
 		INVALID_TABLE_NAME: "Invalid table name (INVALID_TABLE_NAME)",
 
 		INVALID_ALTER_NODE: "Invalid alter node (INVALID_ALTER_NODE)",
+
+		UNABLE_TO_RETRIVE_DATA: "Unable to retrive data (UNABLE_TO_RETRIVE_DATA)",
 	}
 )
 
@@ -46,6 +48,7 @@ const (
 	INVALID_TABLE_NAME
 
 	INVALID_ALTER_NODE
+	UNABLE_TO_RETRIVE_DATA
 )
 
 

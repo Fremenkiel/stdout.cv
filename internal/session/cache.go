@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -13,6 +14,8 @@ type Cache struct {
 	databaseFileTemplate			string
 }
 
+var _ cache = (*Cache)(nil)
+
 func NewCache(databasePath, databaseFileTemplate string) *Cache {
 	return &Cache{
 		databasePath: databasePath,
@@ -20,11 +23,8 @@ func NewCache(databasePath, databaseFileTemplate string) *Cache {
 	}
 }
 
-// Adds session id to cache, alongside timestamp.
-// Uses Update under the hood, and ingores response
-func (c *Cache) AddSession(id string) {
-	c.UpdateSession(id)
-}
+func (c *Cache) DatabasePath() string { return c.databasePath }
+func (c *Cache) DatabaseFileTemplate() string { return c.databaseFileTemplate }
 
 // Loads session by id. If no session is found, then an empty struct is returned
 func (c *Cache) LoadSession(id string) (time.Time, bool) {
@@ -32,6 +32,12 @@ func (c *Cache) LoadSession(id string) (time.Time, bool) {
 		return value.(time.Time), ok
 	}
 	return time.Time{}, false
+}
+
+// Adds session id to cache, alongside timestamp.
+// Uses Update under the hood, and ingores response
+func (c *Cache) AddSession(id string) {
+	c.UpdateSession(id)
 }
 
 // Updated session timestamp in cache, adds if not exists.
@@ -74,6 +80,16 @@ func (c *Cache) LoadAndDeleteOrphantFiles() []string {
 	return orphantFiles
 }
 
+// Gets file path based on session id.
+func (c *Cache) GetFile(id string) (string, error) {
+	str, ok := c.files.Load(id)
+	if !ok {
+		return "", os.ErrNotExist 
+	}
+
+	return str.(string), nil
+}
+
 // Adds session database file path to cache
 func (c *Cache) AddFile(id string) string {
 	filePath := fmt.Sprintf(c.databaseFileTemplate, id)
@@ -85,14 +101,4 @@ func (c *Cache) AddFile(id string) string {
 
 func (c *Cache) RemoveFile(id string) {
 	c.files.Delete(id)
-}
-
-// Gets file path based on session id.
-func (c *Cache) GetFile(id string) (string, error) {
-	str, ok := c.files.Load(id)
-	if !ok {
-		return "", ErrFileNotFound
-	}
-
-	return str.(string), nil
 }

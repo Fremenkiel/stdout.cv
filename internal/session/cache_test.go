@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -316,7 +317,7 @@ func TestGetFile(t *testing.T) {
 			id: "1a100bf-c3be-7d9c-acb8-785e8722f892",
 			loaded: false,
 			expectedResponseContains: "",
-			expectedError: ErrFileNotFound,
+			expectedError: os.ErrNotExist,
 		},
 	}
 

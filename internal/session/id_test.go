@@ -4,31 +4,27 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
+	"uuid"
+
+	"github.com/fremenkiel/stdout.cv/internal/platform/consts"
 )
 
 func TestNewContext(t *testing.T) {
-	sessionUuid, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
+	sessionUuid := uuid.NewV7()
 	id := sessionUuid.String()
 
 	ctx := NewContext(t.Context(), id)
 
-	if ctxValue := ctx.Value(idKey).(string); id != ctxValue {
+	if ctxValue := ctx.Value(consts.IdKey).(string); id != ctxValue {
 		t.Fatalf("unexpected context value, %s got %s", id, ctxValue)
 	}
 }
 
 func TestFromContext(t *testing.T) {
-	sessionUuid, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
+	sessionUuid := uuid.NewV7()
 	id := sessionUuid.String()
 
-	ctx := context.WithValue(t.Context(), idKey, id)
+	ctx := context.WithValue(t.Context(), consts.IdKey, id)
 
 	ctxValue, err := FromContext(ctx)
 	if err != nil {

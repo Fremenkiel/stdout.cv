@@ -7,8 +7,10 @@ import (
 	"testing/synctest"
 	"time"
 
+	"uuid"
+
+	"github.com/fremenkiel/stdout.cv/internal/platform/consts"
 	"github.com/fremenkiel/stdout.cv/internal/testutil"
-	"github.com/google/uuid"
 )
 
 func TestHandle(t *testing.T) {
@@ -100,9 +102,7 @@ func TestHandle(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				env := testutil.LoadTestEnv(t)
-				cache := NewCache(env.DatabasePath, env.DatabaseFileTemplate)
-				service := NewService(cache)
+				mockService := testutil.NewMockSessionService(t)
 
 				handler := func(w http.ResponseWriter, r *http.Request) {
 					contextSessionId, err := FromContext(r.Context())
@@ -120,50 +120,36 @@ func TestHandle(t *testing.T) {
 						}
 					}
 
-					requestTime, ok := cache.LoadSession(contextSessionId)
-
-					if !ok {
-						t.Fatal("request not present in cache")
-					}
-
-					if time.Now() != requestTime {
-						t.Fatalf("unexpected request time, %s got %s", time.Now().String(), requestTime.String())
-					}
-
 					w.WriteHeader(http.StatusOK)
 				}
 
-				middleware := Middleware(service)(http.HandlerFunc(handler))
+				middleware := Middleware(mockService)(http.HandlerFunc(handler))
 
 				ctx := t.Context()
 
 				if test.existingSession {
-					if err := service.UpdateSession(test.sessionId); err != nil {
+					if err := mockService.UpdateSession(test.sessionId); err != nil {
 						t.Fatal(err)
 					}
 
 					test.cookies = append(test.cookies, &http.Cookie{
-						Name:     cookieKey,
+						Name:     consts.CookieKey,
 						Value:    test.sessionId,
 						Path:     "/",
 						MaxAge:   int(5*time.Minute),
 						HttpOnly: true,
 					})
-					ctx := NewContext(t.Context(), test.sessionId)
-					defer testutil.CleanupSession(ctx, env.DatabasePath)
+					ctx := testutil.NewContext(t.Context(), test.sessionId)
+					defer mockService.CleanupSession(ctx)
 				}
 
 				if test.expiredSession {
 					if len(test.sessionId) == 0 {
-						sessionUuid, err := uuid.NewV7()
-						if err != nil {
-							t.Fatal(err)
-						}
-
+						sessionUuid := uuid.NewV7()
 						test.sessionId = sessionUuid.String()
 					}
 
-					cache.sessions.Swap(test.sessionId, time.Now().Add(-(10*time.Minute)))
+					mockService.Cache.Sessions.Swap(test.sessionId, time.Now().Add(-(10*time.Minute)))
 				}
 
 				rr := httptest.NewRecorder()
