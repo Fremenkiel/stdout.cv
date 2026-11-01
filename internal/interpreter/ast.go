@@ -6,7 +6,7 @@ import (
 
 type Node interface {
 	Table()					Node
-	Columns()				[]string
+	ReturnColumns() []string
 	String()				string
 }
 
@@ -17,17 +17,12 @@ type baseToken struct {
 type BaseNode interface {
 	Node
 	Token()					Token
-	ReturnsValue() 	bool
 	AltersSchema()	bool
 	AltersRows()		bool
 }
 
 type baseNode struct {
 	baseToken
-}
-
-func (b *baseNode) ReturnsValue() bool {
-	return b.Token().Type.returnsValue()
 }
 
 func (b *baseNode) AltersSchema() bool {
@@ -46,9 +41,10 @@ func (b *baseNode) Token() Token {
 type InsertNode struct {
 	baseNode
 
-	columns Node
-	into    Node
-	values 	Node
+	columns 	Node
+	into    	Node
+	values 		Node
+	returning Node
 }
 
 var _ BaseNode = (*InsertNode)(nil)
@@ -120,6 +116,19 @@ func newInsetNode(parser *Parser) (BaseNode, error) {
 
 	node.values = values
 
+	if parser.currentToken().Type == RETURNING {
+		// consume returning tokes
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+
+		returning, err := newReturningNode(parser)
+		if err != nil {
+			return nil, err
+		}
+		node.returning = returning
+	}
+
 	if err := consumeEndChar(parser); err != nil {
 		return nil, err
 	}
@@ -131,8 +140,12 @@ func (i *InsertNode) Table() Node {
 	return i.into
 }
 
-func (i *InsertNode) Columns() []string {
-	return i.columns.Columns()
+func (i *InsertNode) ReturnColumns() []string {
+	if i.returning == nil {
+		return nil
+	}
+
+	return i.returning.ReturnColumns()
 }
 
 func (i *InsertNode) String() string {
@@ -145,6 +158,12 @@ func (i *InsertNode) String() string {
 	buf.WriteString(i.columns.String())
 	buf.WriteString(" VALUES ")
 	buf.WriteString(i.values.String())
+
+	if i.returning != nil {
+		buf.WriteString(" RETURNING ")
+		buf.WriteString(i.returning.String())
+	}
+
 	buf.WriteString(";")
 
 	return buf.String()
@@ -154,9 +173,9 @@ func (i *InsertNode) String() string {
 type SelectNode struct {
 	baseNode
 
-	columns []Node
-	from    Node
-	where		Node
+	returning Node
+	from    	Node
+	where			Node
 }
 
 var _ BaseNode = (*SelectNode)(nil)
@@ -180,40 +199,12 @@ func newSelectNode(parser *Parser) (BaseNode, error) {
 		return nil, err
 	}
 
-	for {
-		if parser.currentToken().Type == EOF {
-			return nil, NewError(
-				INVALID_END_OF_STATEMENT,
-				parser.currentToken().LineNumber,
-				parser.currentToken().End,
-				";",
-				)
-		}
-
-		fieldNode, err := newFieldNode(parser)
-		if err != nil {
-			return nil, err
-		}
-
-		node.columns = append(node.columns, fieldNode)
-
-		if parser.currentToken().Type != COMMA {
-			if parser.currentToken().isField() {
-				return nil, NewError(
-					INVALID_SELECT_STATEMENT,
-					parser.currentToken().LineNumber,
-					parser.currentToken().End,
-					parser.currentToken().Text,
-					)
-			}
-			break
-		}
-
-		// consume comma token
-		if err := parser.nextToken(); err != nil {
-			return nil, err
-		}
+	returningNode, err := newReturningNode(parser)
+	if err != nil {
+		return nil, err
 	}
+
+	node.returning = returningNode
 
 	if parser.currentToken().Type != FROM {
 		if err := consumeEndChar(parser); err != nil {
@@ -258,32 +249,16 @@ func (s *SelectNode) Table() Node {
 	return nil
 }
 
-func (s *SelectNode) Columns() []string {
-	var columns []string
-
-	for i := range s.columns {
-		columns = append(columns, s.columns[i].Columns()...)
-	}
-
-	return columns
+func (s *SelectNode) ReturnColumns() []string {
+	return s.returning.ReturnColumns()
 }
 
 func (s *SelectNode) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteString("SELECT")
+	buf.WriteString("SELECT ")
 
-	if len(s.columns) > 0 {
-		buf.WriteString(" ")
-	}
-
-	for i := range s.columns {
-		buf.WriteString(s.columns[i].String())
-
-		if i < len(s.columns) - 1 {
-			buf.WriteString(", ")
-		}
-	}
+	buf.WriteString(s.returning.String())
 
 	if s.from == nil {
 		buf.WriteString(";")
@@ -311,6 +286,7 @@ type UpdateNode struct {
 	table				Node
 	set					[]Node
 	where				Node
+	returning Node
 }
 
 var _ BaseNode = (*UpdateNode)(nil)
@@ -331,15 +307,6 @@ func newUpdateNode(parser *Parser) (BaseNode, error) {
 
 	if err := parser.nextToken(); err != nil {
 		return nil, err
-	}
-
-	if parser.currentToken().Type != FIELD {
-		return nil, NewError(
-			INVALID_UPDATE_STATEMENT,
-			parser.currentToken().LineNumber,
-			parser.currentToken().Start,
-			"table",
-			)
 	}
 
 	table, err := newFieldNode(parser)
@@ -407,6 +374,19 @@ func newUpdateNode(parser *Parser) (BaseNode, error) {
 		node.where = where
 	}
 
+	if parser.currentToken().Type == RETURNING {
+		// consume returning tokes
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+
+		returning, err := newReturningNode(parser)
+		if err != nil {
+			return nil, err
+		}
+		node.returning = returning
+	}
+
 	if err := consumeEndChar(parser); err != nil {
 		return nil, err
 	}
@@ -419,8 +399,12 @@ func (u *UpdateNode) Table() Node {
 }
 
 // update do not return data for our use
-func (u *UpdateNode) Columns() []string {
+func (u *UpdateNode) ReturnColumns() []string {
+	if u.returning == nil {
 	return nil
+	}
+
+	return u.returning.ReturnColumns()
 }
 
 func (u *UpdateNode) String() string {
@@ -450,6 +434,11 @@ func (u *UpdateNode) String() string {
 	if u.where != nil {
 		buf.WriteString(" ")
 		buf.WriteString(u.where.String())
+	}
+
+	if u.returning != nil {
+		buf.WriteString(" RETURNING ")
+		buf.WriteString(u.returning.String())
 	}
 
 	buf.WriteString(";")
@@ -526,7 +515,7 @@ func (d *DeleteNode) Table() Node {
 	return d.from
 }
 
-func (d *DeleteNode) Columns() []string {
+func (d *DeleteNode) ReturnColumns() []string {
 	return nil
 }
 
@@ -624,7 +613,7 @@ func (d *DropNode) Table() Node {
 	return d.table.Table()
 }
 
-func (d *DropNode) Columns() []string {
+func (d *DropNode) ReturnColumns() []string {
 	return nil
 }
 
@@ -752,14 +741,8 @@ func (c *CreateNode) Table() Node {
 	return c.table.Table()
 }
 
-func (c *CreateNode) Columns() []string {
-	var slice = make([]string, 0, len(c.columns))
-
-	for i := range c.columns {
-		slice = append(slice, c.columns[i].Columns()...)
-	}
-
-	return slice
+func (c *CreateNode) ReturnColumns() []string {
+	return nil
 }
 
 func (c *CreateNode) String() string {
@@ -882,7 +865,7 @@ func (a *AlterNode) Table() Node {
 	return a.table.Table()
 }
 
-func (a *AlterNode) Columns() []string {
+func (a *AlterNode) ReturnColumns() []string {
 	return nil
 }
 
@@ -936,6 +919,13 @@ func newFieldNode(parser *Parser) (Node, error) {
 			return nil, err
 		}
 		node = funcNode
+	case parser.currentIsTable() && !parser.currentToken().isTableField():
+	return nil, NewError(
+			INVALID_TABLE_TOKEN,
+			parser.currentToken().LineNumber,
+			parser.currentToken().End,
+			parser.currentToken().Text,
+			)
 	default:
 		fieldNode := FieldNode{
 			token: parser.currentToken(),
@@ -964,7 +954,7 @@ func (f *FieldNode) Table() Node {
 	return f
 }
 
-func (f *FieldNode) Columns() []string {
+func (f *FieldNode) ReturnColumns() []string {
 	return []string{f.String()}
 }
 
@@ -1016,7 +1006,7 @@ func (c *DefinitionNode) Table() Node {
 	return nil
 }
 
-func (c *DefinitionNode) Columns() []string {
+func (c *DefinitionNode) ReturnColumns() []string {
 	return []string{c.token.Text}
 }
 
@@ -1073,7 +1063,7 @@ func (e *ExpressionNode) Table() Node {
 }
 
 // expressions can't hold returned columns
-func (e *ExpressionNode) Columns() []string {
+func (e *ExpressionNode) ReturnColumns() []string {
 	return nil
 }
 
@@ -1185,7 +1175,7 @@ func (o *OperatorNode) Table() Node {
 	return nil
 }
 
-func (o *OperatorNode) Columns() []string {
+func (o *OperatorNode) ReturnColumns() []string {
 	return nil
 }
 
@@ -1267,7 +1257,7 @@ func newCastNode(parser *Parser, prefix Node) (Node, error) {
 	return &node, nil
 }
 
-func (c *CastNode) Columns() []string {
+func (c *CastNode) ReturnColumns() []string {
 	return []string{c.suffix.String()}
 }
 
@@ -1359,7 +1349,7 @@ func newFuncNode(parser *Parser) (Node, error) {
 	return &node, nil
 }
 
-func (f *FuncNode) Columns() []string {
+func (f *FuncNode) ReturnColumns() []string {
 	return []string{f.String()}
 }
 
@@ -1466,7 +1456,7 @@ func (l *ListNode) Table() Node {
 	return nil
 }
 
-func (l *ListNode) Columns() []string {
+func (l *ListNode) ReturnColumns() []string {
 	var columns []string
 
 	for i := range l.nodes {
@@ -1545,7 +1535,7 @@ func (w *WhereNode) Table() Node {
 	return nil
 }
 
-func (w *WhereNode) Columns() []string {
+func (w *WhereNode) ReturnColumns() []string {
 	return nil
 }
 
@@ -1560,6 +1550,93 @@ func (w *WhereNode) String() string {
 	}
 	
 	buf.WriteString(w.expression.String())
+
+	return buf.String()
+}
+
+// returning values
+type ReturningNode struct {
+	identifiers []Node
+}
+
+var _ Node = (*ReturningNode)(nil)
+
+// do not consume end char as where can't be a stand alone statement
+func newReturningNode(parser *Parser) (Node, error) {
+	if !parser.currentToken().isField() {
+		return nil, NewError(
+			INVALID_BASE_NODE_TYPE,
+			parser.currentToken().LineNumber,
+			parser.currentToken().End,
+			parser.currentToken().Text,
+			)
+	}
+
+	var node ReturningNode
+
+	for {
+		if parser.currentToken().Type == EOF {
+			return nil, NewError(
+				INVALID_END_OF_STATEMENT,
+				parser.currentToken().LineNumber,
+				parser.currentToken().End,
+				";",
+				)
+		}
+
+		fieldNode, err := newFieldNode(parser)
+		if err != nil {
+			return nil, err
+		}
+
+		node.identifiers = append(node.identifiers, fieldNode)
+
+		if parser.currentToken().Type != COMMA {
+			if parser.currentToken().isField() {
+				return nil, NewError(
+					INVALID_RETURNING_STATEMENT,
+					parser.currentToken().LineNumber,
+					parser.currentToken().End,
+					parser.currentToken().Text,
+					)
+			}
+			break
+		}
+
+		// consume comma token
+		if err := parser.nextToken(); err != nil {
+			return nil, err
+		}
+	}
+
+	return &node, nil
+}
+
+func (r *ReturningNode) Table() Node {
+	return nil
+}
+
+func (r *ReturningNode) ReturnColumns() []string {
+	var columns []string
+
+	for i := range r.identifiers {
+		columns = append(columns, r.identifiers[i].ReturnColumns()...)
+	}
+
+	return columns
+}
+
+func (r *ReturningNode) String() string {
+	var buf bytes.Buffer
+
+	identLen := len(r.identifiers)
+	for i := range r.identifiers {
+		buf.WriteString(r.identifiers[i].String())
+
+		if i < identLen - 1 {
+			buf.WriteString(", ")
+		}
+	}
 
 	return buf.String()
 }

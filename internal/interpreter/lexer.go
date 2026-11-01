@@ -114,8 +114,17 @@ func (l *Lexer) Next() (Token, error) {
 				)
 			}
 			return l.newToken(WILDCARD, string(c)), nil
-		default:
+		case isQuotedIdentifierChar(c):
+			return l.nextQuotedIdentifier(c)
+		case isIdentifierChar(c, true):
 			return l.nextKeyword(c)
+		default:
+			return Token{}, NewError(
+				UNSUPPORTED_TOKEN,
+				l.currentLine,
+				l.currentChar,
+				string(c),
+				)
 		}
 
 	}
@@ -213,20 +222,6 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		p = l.peakByte()
 
 		switch {
-		case p == '-':
-			return Token{}, l.newKeywordError(string(append(kw, p)))
-		case p == '!':
-			return Token{}, l.newKeywordError(string(append(kw, p)))
-		case p == '=':
-			return Token{}, l.newKeywordError(string(append(kw, p)))
-		case p == '<':
-			return Token{}, l.newKeywordError(string(append(kw, p)))
-		case p == '>':
-			return Token{}, l.newKeywordError(string(append(kw, p)))
-		case p == '*':
-			return Token{}, l.newKeywordError(string(append(kw, p)))
-		case isStringMarker(p):
-			return Token{}, l.newKeywordError(string(append(kw, p)))
 		case isSeperatorChar(p):
 			break outerloop
 		case p == '(':
@@ -235,6 +230,10 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 			break outerloop
 		case p == ',':
 			break outerloop
+		case p == '.':
+		case p == byte(0):
+		case !isIdentifierChar(p, false):
+			return Token{}, l.newKeywordError(string(append(kw, p)))
 		}
 
 		b, err := l.readByte()
@@ -302,9 +301,47 @@ func (l *Lexer) nextKeyword(char byte) (Token, error) {
 		return l.newToken(KEY, keyword), nil
 	case string(TO):
 		return l.newToken(TO, keyword), nil
+	case string(RETURNING):
+		return l.newToken(RETURNING, keyword), nil
 	}
 
 	return l.newToken(FIELD, keyword), nil
+}
+
+func (l *Lexer) nextQuotedIdentifier(char byte) (Token, error) {
+	var kw = []byte{char}
+
+	endQuotedIdentifier := getEndQuotedIdentifiersChar(char)
+	if endQuotedIdentifier == 0 {
+			return Token{}, NewError(
+				INVALID_QUERY_LEX_QUOTED_IDENT,
+				l.currentLine,
+				l.currentChar,
+				string(char),
+				)
+	}
+
+	for {
+		b, err := l.readByte()
+		if err != nil {
+			return Token{}, NewError(
+				INVALID_QUERY_LEX_QUOTED_IDENT,
+				l.currentLine,
+				l.currentChar,
+				string(kw),
+				)
+		}
+
+		kw = append(kw, b)
+
+		if b == endQuotedIdentifier {
+			break
+		}
+	}
+
+	keyword := string(kw)
+
+	return l.newToken(QUOTED_IDENT, keyword), nil
 }
 
 func (l *Lexer) newKeywordError(str string) error {

@@ -709,6 +709,24 @@ func TestNextKeyword(t *testing.T) {
 			expectedErrorCharStartNumber: -1,
 			expectedErrorCharEndNumber: -1,
 		},
+		{
+			name: "quoted_ident",
+			query: "users]",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 6,
+		},
+		{
+			name: "colon",
+			query: "users:",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 6,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -721,6 +739,110 @@ func TestNextKeyword(t *testing.T) {
 			}
 
 			response, err := lexer.nextKeyword(b)
+
+			typedErr, ok := errors.AsType[*Error](err)
+			if err != nil || test.expectedErrorCode != -1 {
+				if !ok {
+					t.Fatalf("unexpected error type, %v", err)
+				}
+
+				if test.expectedErrorCode != typedErr.code {
+					t.Fatalf("unexpected error, %v got %v (%s)", test.expectedErrorCode, typedErr.code, typedErr.msg)
+				}
+
+				errLn, errStartCn, errEndCn := typedErr.Pos()
+				if test.expectedErrorLineNumber != errLn {
+					t.Fatalf("unexpected error line number, %v got %v", test.expectedErrorLineNumber, errLn)
+				}
+
+				if test.expectedErrorCharStartNumber != errStartCn {
+					t.Fatalf("unexpected error char start number, %v got %v", test.expectedErrorCharStartNumber, errStartCn)
+				}
+
+				if test.expectedErrorCharEndNumber != errEndCn {
+					t.Fatalf("unexpected error char end number, %v got %v", test.expectedErrorCharEndNumber, errEndCn)
+				}
+				return
+			}
+    	
+			if test.expectedResponse.Type != response.Type {
+				t.Fatalf("unexpected response type, %s got %s (%s)", test.expectedResponse.Type, response.Type, response.Text)
+			}
+		
+			if test.expectedResponse.Text != response.Text {
+				t.Fatalf("unexpected response text, %s got %s", test.expectedResponse.Text, response.Text)
+			}
+		})
+	}
+}
+
+func TestNextQuotedIdent(t *testing.T) {
+	tests := []struct{
+		name													string
+		query													string
+		expectedResponse  						Token
+		expectedErrorCode 						ErrorCode
+		expectedErrorLineNumber				int
+		expectedErrorCharStartNumber	int
+		expectedErrorCharEndNumber		int
+	} {
+		{
+			name: "square_brackets",
+			query: "[users]",
+			expectedResponse: Token{ Type: QUOTED_IDENT, Text: "[users]" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "double_quotes",
+			query: "\"users\"",
+			expectedResponse: Token{ Type: QUOTED_IDENT, Text: "\"users\"" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "backticks",
+			query: "`users`",
+			expectedResponse: Token{ Type: QUOTED_IDENT, Text: "`users`" },
+			expectedErrorCode: -1,
+			expectedErrorLineNumber: -1,
+			expectedErrorCharStartNumber: -1,
+			expectedErrorCharEndNumber: -1,
+		},
+		{
+			name: "open_ended",
+			query: "[users",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY_LEX_QUOTED_IDENT,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 6,
+		},
+		{
+			name: "no_start_char",
+			query: "users]",
+			expectedResponse: Token{},
+			expectedErrorCode: INVALID_QUERY_LEX_QUOTED_IDENT,
+			expectedErrorLineNumber: 1,
+			expectedErrorCharStartNumber: 0,
+			expectedErrorCharEndNumber: 1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			lexer := NewLexer()
+			lexer.Write(test.query)
+
+			b, err := lexer.readByte()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response, err := lexer.nextQuotedIdentifier(b)
 
 			typedErr, ok := errors.AsType[*Error](err)
 			if err != nil || test.expectedErrorCode != -1 {

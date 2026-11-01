@@ -97,8 +97,9 @@ func (s *Service) Run(ctx context.Context, sql string) (*Query, error) {
 
 		token := node.Token()
 		tableName := node.Table().String()
+		returnColumns := node.ReturnColumns()
 		switch {
-		case i == len(trees) - 1 && node.ReturnsValue():
+		case i == len(trees) - 1 && returnColumns != nil:
 			if tableName == "table_registry" {
 				return nil, lib.NewError(
 					lib.INVALID_TABLE_NAME,
@@ -110,7 +111,7 @@ func (s *Service) Run(ctx context.Context, sql string) (*Query, error) {
 			columns, err := s.schema.AppendWildcardSchema(
 				ctx,
 				tableName,
-				node.Columns(),
+				returnColumns,
 				)
 			if err != nil {
 				return nil, err

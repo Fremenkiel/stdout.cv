@@ -372,6 +372,12 @@ func TestParseSql(t *testing.T) {
 			expectedTokens: 	nil,
 			expectedErrorCode: UNSUPPORTED_QUERY,
 		},
+		{
+			name: "colon",
+			sql: "SELECT * FROM users:;",
+			expectedTokens: 	nil,
+			expectedErrorCode: INVALID_QUERY_LEX_KEYWORD,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -619,7 +625,7 @@ func TestParseQueryColumns(t *testing.T) {
 				t.Fatalf("unexpected tree len, 1 got %v (%v)", treeLen, trees)
 			}
 
-			response := trees[0].Columns()
+			response := trees[0].ReturnColumns()
 			for i := range response {
 				if test.expectedResponse[i] != response[i] {
 					t.Fatalf("unexpected response, '%s' got '%s'", test.expectedResponse[i], response[i])

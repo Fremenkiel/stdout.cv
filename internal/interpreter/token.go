@@ -20,6 +20,7 @@ var fieldMap = map[TokenType]struct{}{
 	NUMBER: {},
 	NULL: {},
 	WILDCARD: {},
+	QUOTED_IDENT: {},
 }
 
 func (t Token) isOperator() bool {
@@ -48,6 +49,7 @@ var operatorMap = map[TokenType]struct{}{
 	COLUMN: {},
 	CONSTRAINT: {},
 	CHECK: {},
+	RETURNING: {},
 	CREATE: {},
 	TO: {},
 	PRIMARY: {},
@@ -66,6 +68,10 @@ var tablePrefixMap = map[TokenType]struct{}{
 	FROM: {},
 	UPDATE: {},
 	DROP: {},
+}
+
+func (t Token) isTableField() bool {
+	return t.Type == FIELD || t.Type == QUOTED_IDENT
 }
 
 type TokenType string
@@ -101,62 +107,64 @@ func (t TokenType) altersRows() bool {
 }
 
 const (
-	EOF					TokenType = "EOF"										// End of file
-	STRING			TokenType = "STRING"								// Strings marked by ''
-	NUMBER			TokenType = "NUMBER"
-	FIELD				TokenType = "FIELD"									// column or table name
+	EOF						TokenType = "EOF"										// End of file
+	STRING				TokenType = "STRING"								// Strings marked by ''
+	NUMBER				TokenType = "NUMBER"
+	FIELD					TokenType = "FIELD"									// column or table name
+	QUOTED_IDENT	TokenType = "QUOTED_IDENT"					// [], "", ``
 
 	// Operator
-	AND					TokenType = "AND"										// AND operator
-	OR					TokenType = "OR"										// OR operator
-	L_THAN			TokenType = "L_THAN"								// < operator
-	G_THAN			TokenType = "G_THAN"								// > operator
-	EQUAL				TokenType = "EQUAL"									// = operator
-	N_EQUAL			TokenType = "N_EQUAL"								// != operator
-	LT_EQUAL		TokenType = "LT_EQUAL"							// <= operator
-	GT_EQUAL		TokenType = "GT_EQUAL"							// >= operator
-	IS					TokenType = "IS"										// IS operator
-	NOT					TokenType = "NOT"										// NOT operator
-	LIKE				TokenType = "LIKE"									// LIKE operator
-	AS					TokenType = "AS"										// AS operator
-	IN					TokenType = "IN"										// IN operator
-	IF					TokenType = "IF"										// IF operator
-	EXISTS			TokenType = "EXISTS"								// EXISTS operator
+	AND						TokenType = "AND"										// AND operator
+	OR						TokenType = "OR"										// OR operator
+	L_THAN				TokenType = "L_THAN"								// < operator
+	G_THAN				TokenType = "G_THAN"								// > operator
+	EQUAL					TokenType = "EQUAL"									// = operator
+	N_EQUAL				TokenType = "N_EQUAL"								// != operator
+	LT_EQUAL			TokenType = "LT_EQUAL"							// <= operator
+	GT_EQUAL			TokenType = "GT_EQUAL"							// >= operator
+	IS						TokenType = "IS"										// IS operator
+	NOT						TokenType = "NOT"										// NOT operator
+	LIKE					TokenType = "LIKE"									// LIKE operator
+	AS						TokenType = "AS"										// AS operator
+	IN						TokenType = "IN"										// IN operator
+	IF						TokenType = "IF"										// IF operator
+	EXISTS				TokenType = "EXISTS"								// EXISTS operator
 
 	// 	Delimitor
-	SEMICOL			TokenType = "SEMICOL"								// ;
-	COMMA				TokenType = "COMMA"									// ,
-	L_PARAN			TokenType = "L_PARAN"								// (
-	R_PARAN			TokenType = "R_PARAN"								// )
+	SEMICOL				TokenType = "SEMICOL"								// ;
+	COMMA					TokenType = "COMMA"									// ,
+	L_PARAN				TokenType = "L_PARAN"								// (
+	R_PARAN				TokenType = "R_PARAN"								// )
 
 	// Keywords
-	SELECT			TokenType = "SELECT"
-	UPDATE			TokenType = "UPDATE"
-	INSERT			TokenType = "INSERT"
-	DELETE			TokenType = "DELETE"
-	DROP				TokenType = "DROP"
-	ALTER				TokenType = "ALTER"
-	CREATE			TokenType = "CREATE"
+	SELECT				TokenType = "SELECT"
+	UPDATE				TokenType = "UPDATE"
+	INSERT				TokenType = "INSERT"
+	DELETE				TokenType = "DELETE"
+	DROP					TokenType = "DROP"
+	ALTER					TokenType = "ALTER"
+	CREATE				TokenType = "CREATE"
 
 	// Expressions
-	INTO 				TokenType = "INTO"
-	FROM 				TokenType = "FROM"
-	WHERE 			TokenType = "WHERE"
-	VALUES 			TokenType = "VALUES"
-	SET 				TokenType = "SET"
-	TABLE 			TokenType = "TABLE"
-	ADD					TokenType = "ADD"
-	RENAME			TokenType = "RENAME"
-	COLUMN			TokenType = "COLUMN"
-	TO					TokenType = "TO"
-	PRIMARY			TokenType = "PRIMARY"
-	KEY					TokenType = "KEY"
-	CONSTRAINT	TokenType = "CONSTRAINT"
-	CHECK				TokenType = "CHECK"
+	INTO 					TokenType = "INTO"
+	FROM 					TokenType = "FROM"
+	WHERE 				TokenType = "WHERE"
+	VALUES 				TokenType = "VALUES"
+	SET 					TokenType = "SET"
+	TABLE 				TokenType = "TABLE"
+	ADD						TokenType = "ADD"
+	RENAME				TokenType = "RENAME"
+	COLUMN				TokenType = "COLUMN"
+	TO						TokenType = "TO"
+	PRIMARY				TokenType = "PRIMARY"
+	KEY						TokenType = "KEY"
+	CONSTRAINT		TokenType = "CONSTRAINT"
+	CHECK					TokenType = "CHECK"
+	RETURNING			TokenType = "RETURNING"
 
 	// VALUES
-	NULL			TokenType = "NULL"
-	WILDCARD	TokenType = "WILDCARD"						// *
+	NULL					TokenType = "NULL"
+	WILDCARD			TokenType = "WILDCARD"						// *
 )
 
 // todo: change to switch with default -1 (Kevin)
@@ -180,8 +188,10 @@ var precedenceMap = map[TokenType]int{
 	COLUMN: -1,
 	CONSTRAINT: -1,
 	CHECK: -1,
+	RETURNING: -1,
 
 	FIELD: 0,
+	QUOTED_IDENT: 0,
 	STRING: 0,
 	NUMBER: 0,
 	NULL: 0,

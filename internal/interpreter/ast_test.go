@@ -35,10 +35,7 @@ func TestNewInsertNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "INSERT INTO users (name, age) VALUES ('kevin', 25);",
-			expectedColumns: []string{
-				"name",
-				"age",
-			},
+			expectedColumns: nil,
 			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
@@ -105,6 +102,85 @@ func TestNewInsertNode(t *testing.T) {
 			expectedTable: nil,
 			expectedErrorCode: INVALID_INSERT_STATEMENT,
 		},
+		{
+			name: "returning",
+			tokens: []Token{
+				{ Type: INSERT, Text: "INSERT" },
+				{ Type: INTO, Text: "INTO" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
+				{ Type: FIELD, Text: "age" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: VALUES, Text: "VALUES" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
+				{ Type: NUMBER, Text: "25" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: RETURNING, Text: "RETURNING" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "INSERT INTO users (name, age) VALUES ('kevin', 25) RETURNING id;",
+			expectedColumns: []string{
+				"id",
+			},
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "quoted_ident",
+			tokens: []Token{
+				{ Type: INSERT, Text: "INSERT" },
+				{ Type: INTO, Text: "INTO" },
+				{ Type: QUOTED_IDENT, Text: "[users]" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
+				{ Type: FIELD, Text: "age" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: VALUES, Text: "VALUES" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
+				{ Type: NUMBER, Text: "25" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "INSERT INTO [users] (name, age) VALUES ('kevin', 25);",
+			expectedColumns: nil,
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "[users]" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "invalid_table",
+			tokens: []Token{
+				{ Type: INSERT, Text: "INSERT" },
+				{ Type: INTO, Text: "INTO" },
+				{ Type: STRING, Text: "'users'" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: COMMA, Text: "," },
+				{ Type: FIELD, Text: "age" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: VALUES, Text: "VALUES" },
+				{ Type: L_PARAN, Text: "(" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: COMMA, Text: "," },
+				{ Type: NUMBER, Text: "25" },
+				{ Type: R_PARAN, Text: ")" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "",
+			expectedColumns: nil,
+			expectedTable: nil,
+			expectedErrorCode: INVALID_TABLE_TOKEN,
+		},
 	}
 
 	for _, test := range tests {
@@ -131,7 +207,11 @@ func TestNewInsertNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
@@ -145,7 +225,6 @@ func TestNewInsertNode(t *testing.T) {
 			if str := response.Table().String(); test.expectedTable.String() != str {
 				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
 			}
-
 		})
 	}
 }
@@ -342,7 +421,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: INVALID_SELECT_STATEMENT,
+			expectedErrorCode: INVALID_RETURNING_STATEMENT,
 		},
 		{
 			name: "wildcard_no_comma",
@@ -358,7 +437,7 @@ func TestNewSelectNode(t *testing.T) {
 			expectedResponse: "",
 			expectedColumns: nil,
 			expectedTable: nil,
-			expectedErrorCode: INVALID_SELECT_STATEMENT,
+			expectedErrorCode: INVALID_RETURNING_STATEMENT,
 		},
 		{
 			name: "update",
@@ -376,6 +455,23 @@ func TestNewSelectNode(t *testing.T) {
 			expectedColumns: nil,
 			expectedTable: nil,
 			expectedErrorCode: INVALID_SELECT_STATEMENT,
+		},
+		{
+			name: "quoted_ident",
+			tokens: []Token{
+				{ Type: SELECT, Text: "SELECT" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: FROM, Text: "FROM" },
+				{ Type: QUOTED_IDENT, Text: "[users]" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "SELECT name FROM [users];",
+			expectedColumns: []string{
+				"name",
+			},
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "[users]" } } },
+			expectedErrorCode: -1,
 		},
 	}
 
@@ -403,7 +499,11 @@ func TestNewSelectNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
@@ -417,7 +517,6 @@ func TestNewSelectNode(t *testing.T) {
 			if str := response.Table().String(); test.expectedTable.String() != str {
 				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
 			}
-
 		})
 	}
 }
@@ -444,9 +543,7 @@ func TestNewUpdateNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "UPDATE users SET name = 'kevin';",
-			expectedColumns: []string{
-				"name",
-			},
+			expectedColumns: nil,
 			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
@@ -467,9 +564,7 @@ func TestNewUpdateNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "UPDATE users SET name = 'kevin' WHERE id = 1;",
-			expectedColumns: []string{
-				"name",
-			},
+			expectedColumns: nil,
 			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
 			expectedErrorCode: -1,
 		},
@@ -533,10 +628,46 @@ func TestNewUpdateNode(t *testing.T) {
 				{ Type: EOF, Text: "" },
 			},
 			expectedResponse: "UPDATE users SET name = 'kevin', email = 'test@gmail.dk', age = 25 WHERE id = 1;",
+			expectedColumns: nil,
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "returning",
+			tokens: []Token{
+				{ Type: UPDATE, Text: "UPDATE" },
+				{ Type: FIELD, Text: "users" },
+				{ Type: SET, Text: "SET" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: RETURNING, Text: "RETURNING" },
+				{ Type: FIELD, Text: "id" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "UPDATE users SET name = 'kevin' RETURNING id;",
 			expectedColumns: []string{
-				"name",
+				"id",
 			},
 			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "users" } } },
+			expectedErrorCode: -1,
+		},
+		{
+			name: "quoted_ident",
+			tokens: []Token{
+				{ Type: UPDATE, Text: "UPDATE" },
+				{ Type: QUOTED_IDENT, Text: "[users]" },
+				{ Type: SET, Text: "SET" },
+				{ Type: FIELD, Text: "name" },
+				{ Type: EQUAL, Text: "=" },
+				{ Type: STRING, Text: "kevin" },
+				{ Type: SEMICOL, Text: ";" },
+				{ Type: EOF, Text: "" },
+			},
+			expectedResponse: "UPDATE [users] SET name = 'kevin';",
+			expectedColumns: nil,
+			expectedTable: &FieldNode{ baseToken{ Token{ Type: FIELD, Text: "[users]" } } },
 			expectedErrorCode: -1,
 		},
 	}
@@ -565,7 +696,11 @@ func TestNewUpdateNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
@@ -579,7 +714,6 @@ func TestNewUpdateNode(t *testing.T) {
 			if str := response.Table().String(); test.expectedTable.String() != str {
 				t.Fatalf("unexpected table name, %s got %s", test.expectedTable.String(), str)
 			}
-
 		})
 	}
 }
@@ -678,7 +812,7 @@ func TestNewDeleteNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			if cols := response.Columns(); cols != nil {
+			if cols := response.ReturnColumns(); cols != nil {
 					t.Fatalf("unexpected cols, nil got %v", cols)
 			}
 
@@ -802,7 +936,7 @@ func TestNewDropNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			if cols := response.Columns(); cols != nil {
+			if cols := response.ReturnColumns(); cols != nil {
 				t.Fatalf("unexpected column, nil got %v", cols)
 			}
 
@@ -949,7 +1083,7 @@ func TestNewAlterNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			if cols := response.Columns(); cols != nil {
+			if cols := response.ReturnColumns(); cols != nil {
 				t.Fatalf("unexpected column, nil got %v", cols)
 			}
 
@@ -1028,11 +1162,8 @@ func TestNewCreateNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
-			for i := range cols {
-				if str := cols[i]; test.expectedColumns[i] != str {
-					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
-				}
+			if cols := response.ReturnColumns(); cols != nil {
+				t.Fatalf("unexpected column, nil got %v", cols)
 			}
 
 			if response.Table() == nil && test.expectedTable == nil {
@@ -1196,7 +1327,11 @@ func TestNewFieldNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
@@ -1267,7 +1402,11 @@ func TestNewDefinitionNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
@@ -1371,7 +1510,11 @@ func TestNewExpressionNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
@@ -1559,8 +1702,8 @@ func TestNewOperationNode(t *testing.T) {
 				t.Fatalf("unexpected table, nil got %v", node.Table())
 			}
 
-			if node.Columns() != nil {
-				t.Fatalf("unexpected columns, nil got %v", node.Columns())
+			if columns := node.ReturnColumns(); columns != nil {
+				t.Fatalf("unexpected columns, nil got %v", columns)
 			}
 		})
 	}
@@ -1662,7 +1805,11 @@ func TestNewCastNode(t *testing.T) {
 				t.Fatalf("unexpected response, %s got %s", test.expectedResponse, str)
 			}
 
-			cols := response.Columns()
+			cols := response.ReturnColumns()
+			if len(test.expectedColumns) != len(cols) {
+				t.Fatalf("unexpected return columns len, %v got %v", len(test.expectedColumns), len(cols))
+			}
+
 			for i := range cols {
 				if str := cols[i]; test.expectedColumns[i] != str {
 					t.Fatalf("unexpected col, %s got %s", test.expectedColumns[i], str)
