@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/fremenkiel/stdout.cv/internal/session"
+	_ "modernc.org/sqlite"
 )
 
 type sessionCache interface {

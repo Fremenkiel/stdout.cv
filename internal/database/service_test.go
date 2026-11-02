@@ -17,7 +17,7 @@ func TestGetStats(t *testing.T) {
 			name: "get_stats",
 			expectedResponse: Stats{
 				Version: "0.1.0",
-				Size: 16.384,
+				Size: 24.576,
 			},
 			expectedError: nil,
 		},

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/fremenkiel/stdout.cv/internal/session"
+	_ "modernc.org/sqlite"
 )
 
 type sessionCache interface {

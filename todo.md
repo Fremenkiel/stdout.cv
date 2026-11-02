@@ -1,5 +1,3 @@
 - Simplify tests
 - Fill out database
 - Comment
-- Repo test
-- Registry tests

@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/fremenkiel/stdout.cv/internal/platform/consts"
 )
@@ -20,7 +19,6 @@ func FromContext(ctx context.Context) (consts.Id, error) {
 	}
 
 	id, ok := ctx.Value(consts.IdKey).(string)
-	log.Printf("ctx val %v, ok %v", ctx.Value(consts.IdKey), ok)
 
 	if !ok {
 		return "", ErrNoSessionInContext
