@@ -30,29 +30,29 @@ func NewLogger() {
 	slog.SetDefault(logger)
 }
 
-func LogInfo(caller, name string, args... slog.Attr) {
-	log(slog.LevelInfo, caller, name, args...)
+func LogInfo(caller, message string, args... slog.Attr) {
+	log(slog.LevelInfo, caller, message, args...)
 }
 
-func LogWarning(caller, name string, args... slog.Attr) {
-	log(slog.LevelWarn, caller, name, args...)
+func LogWarning(caller, message string, args... slog.Attr) {
+	log(slog.LevelWarn, caller, message, args...)
 }
 
 // Only to be used at boot
-func LogFatal(caller, name string, args... slog.Attr) {
-	LogError(caller, name, args...)
+func LogFatal(caller, message string, args... slog.Attr) {
+	LogError(caller, message, args...)
 	os.Exit(0)
 }
 
-func LogError(caller, name string, args... slog.Attr) {
-	log(slog.LevelError, caller, name, args...)
+func LogError(caller, message string, args... slog.Attr) {
+	log(slog.LevelError, caller, message, args...)
 }
 
-func log(level slog.Level, caller, name string, args... slog.Attr) {
+func log(level slog.Level, caller, message string, args... slog.Attr) {
 	slog.LogAttrs(
 		context.Background(),
 		level,
-		fmt.Sprintf("%s: %s", caller, name),
+		fmt.Sprintf("%s: %s", caller, message),
 		args...
 		)
 }
